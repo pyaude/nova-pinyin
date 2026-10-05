@@ -2,6 +2,8 @@
 """Run with xvfb-run and private XDG directories after installing the package."""
 import os
 import runpy
+import subprocess
+import sys
 import tkinter as tk
 import tempfile
 import time
@@ -9,6 +11,18 @@ from pathlib import Path
 from unittest.mock import patch
 
 assert os.environ.get("NOVA_ISOLATED_GUI_TEST") == "1"
+if os.environ.get("_NOVA_MANAGER_PRIVATE_DBUS") != "1":
+    # Save requests a daemon reload. Give the test its own bus even when the caller
+    # inherited a desktop bus; fcitx5-remote also aborts when no session bus exists.
+    environment = os.environ.copy()
+    environment["_NOVA_MANAGER_PRIVATE_DBUS"] = "1"
+    environment.pop("WAYLAND_DISPLAY", None)
+    with tempfile.TemporaryDirectory(prefix="nova-manager-run-") as runtime:
+        environment["XDG_RUNTIME_DIR"] = runtime
+        result = subprocess.run(
+            ["dbus-run-session", "--", sys.executable, str(Path(__file__).resolve())],
+            env=environment, check=False)
+    sys.exit(result.returncode)
 manager = runpy.run_path("/usr/bin/novapinyin-manager", run_name="smoke")
 root = tk.Tk()
 try:

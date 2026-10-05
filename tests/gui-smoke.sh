@@ -2,6 +2,7 @@
 # Run inside a NEW dbus-run-session and a private Xvfb display, not the user's desktop.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+build_dir=${NOVA_BUILD_DIR:-build}
 if [ "${NOVA_ISOLATED_GUI_TEST:-}" != 1 ]; then
   echo 'Set NOVA_ISOLATED_GUI_TEST=1 inside a fresh dbus-run-session before running.' >&2
   exit 2
@@ -46,7 +47,7 @@ fcitx5 --disable=wayland,ibus > "$test_dir/fcitx.log" 2>&1 &
 fcitx_pid=$!
 sleep 2
 for toolkit in gtk qt; do
-  build/nova-${toolkit}-smoke "$test_dir/$toolkit.txt" > "$test_dir/$toolkit.log" 2>&1 &
+  "$build_dir/nova-${toolkit}-smoke" "$test_dir/$toolkit.txt" > "$test_dir/$toolkit.log" 2>&1 &
   client_pid=$!
   sleep 1
   window=$(xdotool search --name "NovaPinyin $( [ "$toolkit" = gtk ] && echo GTK || echo Qt ) Smoke" | head -1)

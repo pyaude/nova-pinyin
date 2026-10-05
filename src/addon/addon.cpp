@@ -657,7 +657,7 @@ class Engine : public InputMethodEngine {
                 backend_ = std::move(next);
                 applied_ = pending_;
                 error_.clear();
-                // Retain an in-progress composition and its immutable candidate mapping.
+                // Retain an in-progress composition/completion and its candidate mapping.
                 // New sessions use the new dictionary. Explicit data clearing invalidates old
                 // sessions.
                 bool epochChanged =
@@ -665,7 +665,8 @@ class Engine : public InputMethodEngine {
                 lastGeneration_ = applied_->generation;
                 instance_->inputContextManager().foreach ([this, epochChanged](InputContext *ic) {
                     auto *s = ic->propertyFor(&factory_);
-                    if (epochChanged || !s->session || s->session->empty()) {
+                    if (epochChanged || !s->session ||
+                        (s->session->empty() && !s->completion.active())) {
                         invalidate(ic);
                         if (ic->hasFocus())
                             update(ic);

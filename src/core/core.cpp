@@ -5,6 +5,7 @@
 #include <fcitx-utils/utf8.h>
 #include <filesystem>
 #include <libime/core/lattice.h>
+#include <libime/core/languagemodel.h>
 #include <libime/core/userlanguagemodel.h>
 #include <libime/pinyin/pinyindictionary.h>
 #include <libime/pinyin/shuangpinprofile.h>
@@ -197,7 +198,10 @@ std::vector<Candidate> Session::candidates() {
     }
     std::map<size_t, double> contextBoost;
     if (!hint_.empty()) {
-        auto *model = backend_->ime()->model();
+        // UserLanguageModel retains WordNode pointers in State. Our context nodes
+        // are temporary, so use the static LM (same mapped model file) instead.
+        libime::LanguageModel staticModel(backend_->ime()->model()->languageModelFile());
+        auto *model = &staticModel;
         auto lmState = model->nullState();
         // Greedy matching of up to four Unicode characters against the static LM vocabulary.
         for (size_t offset = 0; offset < hint_.size();) {

@@ -44,12 +44,6 @@ TEST(Addon, EventsAndPrivacy) {
                                {{"ProjectSymbolFoo", 10}, {"ProjectSymbolBar", 2}});
     }
     auto engine = nova::createEngine(&instance);
-    auto startup = instance.eventLoop().addTimeEvent(
-        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 3000000, 0, [&](EventSourceTime *, uint64_t) {
-            instance.eventLoop().exit();
-            return false;
-        });
-    instance.eventLoop().exec();
     Client client(instance.inputContextManager());
     InputMethodEntry entry("novapinyin", "NovaPinyin", "zh_CN", "novapinyin");
     auto send = [&](const std::string &key, bool release = false) {
@@ -57,6 +51,38 @@ TEST(Addon, EventsAndPrivacy) {
         engine->keyEvent(entry, event);
         return event.accepted();
     };
+    EXPECT_FALSE(send("Control+Alt+space")); // verify the untouched default before probing
+    RawConfig startupConfig;
+    startupConfig.setValueByPath("Developer", "True");
+    startupConfig.setValueByPath("ActiveProject", "addon-project");
+    engine->setConfig(startupConfig);
+    // Drive real asynchronous loading until the expected project is visible.
+    // Learning assertions also require the initial store snapshot to be ready.
+    bool projectReady = false;
+    const auto deadline = now(CLOCK_MONOTONIC) + 20000000;
+    auto projectWait = instance.eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 100000, 0,
+        [&](EventSourceTime *event, uint64_t) {
+            send("Escape");
+            send("Control+Alt+space");
+            for (char c : std::string("ProjectSym"))
+                send(std::string(1, c));
+            const auto list = client.inputPanel().candidateList();
+            projectReady = list && list->size() > 0;
+            if (projectReady || now(CLOCK_MONOTONIC) >= deadline) {
+                instance.eventLoop().exit();
+                return false;
+            }
+            event->setNextInterval(100000);
+            event->setEnabled(true);
+            return true;
+        });
+    instance.eventLoop().exec();
+    ASSERT_TRUE(projectReady) << "Project candidates were not loaded within 20 seconds";
+    send("Escape");
+    startupConfig.setValueByPath("Developer", "False");
+    startupConfig.setValueByPath("ActiveProject", "");
+    engine->setConfig(startupConfig);
     for (char c : std::string("nihao"))
         send(std::string(1, c));
     ASSERT_TRUE(client.inputPanel().candidateList());
@@ -185,4 +211,86 @@ TEST(Addon, EventsAndPrivacy) {
     ASSERT_EQ(phrases.size(), 1);
     EXPECT_EQ(phrases.front().text, "你好");
     EXPECT_EQ(phrases.front().count, 1);
+}
+TEST(Addon, LearningRefreshPreservesCompletion) {
+    auto dir = std::filesystem::temp_directory_path() /
+               ("nova-addon-refresh-" + std::to_string(getpid()));
+    std::filesystem::create_directories(dir);
+    setenv("XDG_DATA_HOME", dir.c_str(), 1);
+    setenv("XDG_CONFIG_HOME", dir.c_str(), 1);
+    char program[] = "nova-refresh-test";
+    char disabled[] = "--disable=all";
+    char *argv[] = {program, disabled, nullptr};
+    Instance instance(2, argv);
+    instance.initialize();
+    {
+        nova::Database database(dir / "novapinyin/user.db");
+        database.importProject("refresh-project", dir.string(), {{"ReadySymbol", 1}});
+    }
+    auto engine = nova::createEngine(&instance);
+    Client client(instance.inputContextManager());
+    InputMethodEntry entry("novapinyin", "NovaPinyin", "zh_CN", "novapinyin");
+    RawConfig config;
+    config.setValueByPath("Developer", "True");
+    config.setValueByPath("Learning", "True");
+    config.setValueByPath("Privacy", "False");
+    config.setValueByPath("ActiveProject", "refresh-project");
+    engine->setConfig(config);
+    auto send = [&](const std::string &key) {
+        KeyEvent event(&client, Key(key), false);
+        engine->keyEvent(entry, event);
+        return event.accepted();
+    };
+    auto type = [&](const std::string &text) {
+        for (char key : text)
+            send(key == ' ' ? "space" : std::string(1, key));
+    };
+    bool started = false, retained = true;
+    uint64_t refreshStarted = 0;
+    std::shared_ptr<CandidateList> visible;
+    const auto deadline = now(CLOCK_MONOTONIC) + 20000000;
+    // Keep one event loop running through both startup and the learning refresh.
+    auto probe = instance.eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 100000, 0,
+        [&](EventSourceTime *event, uint64_t) {
+            if (!started) {
+                send("Escape");
+                send("Control+Alt+space");
+                type("ReadySym");
+                const auto list = client.inputPanel().candidateList();
+                if (list && list->size() > 0) {
+                    send("Escape");
+                    type("nihao");
+                    send("space"); // ordinary learning changes the snapshot, not its generation
+                    send("Control+Alt+space");
+                    type("git che");
+                    visible = client.inputPanel().candidateList();
+                    started = true;
+                    refreshStarted = now(CLOCK_MONOTONIC);
+                }
+            } else {
+                retained = engine->subMode(entry, client) == "补全" &&
+                           client.inputPanel().candidateList() == visible;
+                if (!retained || now(CLOCK_MONOTONIC) - refreshStarted >= 8000000) {
+                    instance.eventLoop().exit();
+                    return false;
+                }
+            }
+            if (now(CLOCK_MONOTONIC) >= deadline) {
+                instance.eventLoop().exit();
+                return false;
+            }
+            event->setNextInterval(100000);
+            event->setEnabled(true);
+            return true;
+        });
+    instance.eventLoop().exec();
+    ASSERT_TRUE(started) << "Initial project snapshot was not loaded within 20 seconds";
+    ASSERT_TRUE(retained) << "Ordinary learning cancelled or replaced visible completion";
+    ASSERT_TRUE(visible);
+    ASSERT_GT(visible->size(), 0);
+    EXPECT_EQ(client.committed, "你好");
+    EXPECT_TRUE(send("Return"));
+    EXPECT_EQ(client.committed, "你好git checkout");
+    EXPECT_FALSE(send("Return"));
 }

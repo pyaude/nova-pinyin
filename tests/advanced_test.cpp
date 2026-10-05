@@ -138,6 +138,34 @@ TEST(Context, RankingRespondsToLanguageModelHint) {
     }
     EXPECT_TRUE(changed);
 }
+TEST(Context, LongHintRepeatedEditsAndBackendRefresh) {
+    // Exercise successive LM states after each temporary hint word has died.
+    // Older sessions must remain usable while the addon replaces its backend.
+    auto backend = std::make_shared<Backend>();
+    Session original(backend);
+    original.setContext("银行公司今天这里银行公司今天这里银行公司今天这里");
+    original.type("zhang");
+    const auto old = original.candidates();
+    ASSERT_FALSE(old.empty());
+    backend = std::make_shared<Backend>(std::vector<Phrase>{{"ni hao", "你好", 20, 0}});
+    Session refreshed(backend);
+    for (int round = 0; round < 5; ++round) {
+        refreshed.setContext("今天我在银行公司办理业务这里需要你好世界");
+        for (char key : std::string("nihao")) {
+            ASSERT_TRUE(refreshed.type(std::string(1, key)));
+            ASSERT_FALSE(refreshed.candidates().empty());
+        }
+        refreshed.backspace();
+        refreshed.candidates();
+        refreshed.type("o");
+        const auto values = refreshed.candidates();
+        ASSERT_FALSE(values.empty());
+        EXPECT_EQ(refreshed.select(values.front().id, values.front().revision),
+                  values.front().text);
+        EXPECT_TRUE(refreshed.contextHint().empty());
+    }
+    EXPECT_EQ(original.select(old.front().id, old.front().revision), old.front().text);
+}
 TEST(Project, PersistenceMigrationExportAndClear) {
     auto folder = path();
     const auto dbpath = folder / "user.db";

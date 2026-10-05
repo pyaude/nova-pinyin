@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -45,13 +46,13 @@ class ProjectIndex(unittest.TestCase):
             root = Path(temporary)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             (root / "sub").mkdir()
-            (root / "sub/tracked.py").write_text("TrackedSecret = 1\n")
+            (root / "sub/tracked.py").write_text("TrackedHiddenSymbol = 1\n")
             subprocess.run(["git", "-C", str(root), "add", "sub/tracked.py"], check=True)
             (root / "sub/.gitignore").write_text("tracked.py\n*.generated.py\n!keep.generated.py\n")
             (root / "sub/drop.generated.py").write_text("DropSymbol = 1\n")
             (root / "sub/keep.generated.py").write_text("KeepSymbol = 1\n")
             _, words, _ = project.scan(root)
-            self.assertNotIn("TrackedSecret", words)
+            self.assertNotIn("TrackedHiddenSymbol", words)
             self.assertNotIn("DropSymbol", words)
             self.assertIn("KeepSymbol", words)
 
@@ -67,7 +68,6 @@ class ProjectIndex(unittest.TestCase):
                 project.scan(root)
 
     def test_safe_open_rejects_parent_symlink(self):
-        import os
         with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:
             root = Path(temporary)
             (Path(outside) / "data.py").write_text("ExternalSymbol = 1")
@@ -78,6 +78,160 @@ class ProjectIndex(unittest.TestCase):
                     project.safe_read(fd, "link/data.py", project.MAX_FILE)
             finally:
                 os.close(fd)
+
+    def test_deadline_checked_inside_a_single_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "main.py").write_text("FirstSymbol = 1\n")
+            now = [0]
+            read = project.safe_read
+            def slow_read(*args):
+                data = read(*args)
+                now[0] = 21
+                return data
+            with patch.object(project.time, "monotonic", side_effect=lambda: now[0]), \
+                 patch.object(project, "safe_read", side_effect=slow_read):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+
+    def test_deadline_after_last_file_tokenization(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "main.py").write_text("FirstSymbol = 1\n")
+            now = [0]
+            def slow_identifiers(*args):
+                now[0] = 21
+                return ["FirstSymbol"]
+            with patch.object(project.time, "monotonic", side_effect=lambda: now[0]), \
+                 patch.object(project, "identifiers", side_effect=slow_identifiers):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+
+    def test_deadline_after_failed_read(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "main.py").write_text("FirstSymbol = 1\n")
+            now = [0]
+            def slow_failure(*args):
+                now[0] = 21
+                raise OSError("unreadable")
+            with patch.object(project.time, "monotonic", side_effect=lambda: now[0]), \
+                 patch.object(project, "safe_read", side_effect=slow_failure):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+
+    def test_enumeration_stops_at_entry_limit(self):
+        class Entries:
+            seen = 0
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def __iter__(self):
+                return self
+            def __next__(self):
+                self.seen += 1
+                if self.seen > 10:
+                    raise AssertionError("directory enumeration was not bounded")
+                class Entry:
+                    name = "main.py"
+                    def is_dir(self, follow_symlinks):
+                        return False
+                return Entry()
+        with tempfile.TemporaryDirectory() as temporary:
+            fd = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY)
+            entries = Entries()
+            try:
+                with patch.object(project, "MAX_ENTRIES", 2), \
+                     patch.object(project.os, "scandir", return_value=entries):
+                    with self.assertRaises(ValueError):
+                        list(project.bounded_walk(fd, lambda: None))
+                self.assertEqual(entries.seen, 3)
+            finally:
+                os.close(fd)
+
+    def test_directory_replacement_during_traversal_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:
+            root = Path(temporary)
+            (root / "sub").mkdir()
+            (Path(outside) / "main.py").write_text("OutsideSymbol = 1\n")
+            fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+            walk = project.bounded_walk(fd, lambda: None)
+            try:
+                _, dirs, _ = next(walk)
+                self.assertEqual(dirs, ["sub"])
+                (root / "sub").rmdir()
+                (root / "sub").symlink_to(outside, target_is_directory=True)
+                with self.assertRaises(OSError):
+                    next(walk)
+            finally:
+                walk.close()
+                os.close(fd)
+
+    def test_rejected_files_count_toward_scan_budgets(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ("first.py", "second.py"):
+                (root / name).write_bytes(b"InvalidSymbol\0")
+            with patch.object(project, "MAX_FILES", 1):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+            with patch.object(project, "MAX_TOTAL", 1):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+
+    def test_safe_read_rejects_absolute_and_parent_paths(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "main.py").write_text("FirstSymbol = 1\n")
+            fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                for relative in (root / "main.py", "../main.py", "."):
+                    with self.assertRaises(ValueError):
+                        project.safe_read(fd, relative, project.MAX_FILE)
+            finally:
+                os.close(fd)
+
+    def test_git_timeout_uses_remaining_scan_budget(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "main.py").write_text("FirstSymbol = 1\n")
+            now = [0]
+            timeouts = []
+            def git(root, *args, timeout, **kwargs):
+                timeouts.append(timeout)
+                if args[0] == "rev-parse":
+                    now[0] = 19
+                    return subprocess.CompletedProcess(args, 0)
+                raise subprocess.TimeoutExpired(args, timeout)
+            with patch.object(project.time, "monotonic", side_effect=lambda: now[0]), \
+                 patch.object(project, "git_command", side_effect=git):
+                with self.assertRaisesRegex(ValueError, "超时"):
+                    project.scan(root)
+            self.assertEqual(timeouts, [10, 1])
+
+    def test_directory_count_and_depth_limits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "sub/deep").mkdir(parents=True)
+            (root / "sub/main.py").write_text("IncludedSymbol = 1\n")
+            (root / "sub/deep/main.py").write_text("TooDeepSymbol = 1\n")
+            with patch.object(project, "MAX_DIRECTORIES", 1):
+                with self.assertRaises(ValueError):
+                    project.scan(root)
+            with patch.object(project, "MAX_DEPTH", 1):
+                _, words, _ = project.scan(root)
+            self.assertIn("IncludedSymbol", words)
+            self.assertNotIn("TooDeepSymbol", words)
+
+    def test_failed_scan_never_imports_partial_index(self):
+        generation = subprocess.CompletedProcess([], 0, stdout="7\n")
+        with patch.object(project.subprocess, "run", return_value=generation) as run, \
+             patch.object(project, "scan", side_effect=ValueError("scan budget exceeded")):
+            with self.assertRaises(ValueError):
+                project.index_project("demo", "/unused")
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0], ["novapinyin-tool", "project-generation"])
 
 
 if __name__ == "__main__":
