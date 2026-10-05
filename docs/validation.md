@@ -30,7 +30,7 @@ NOVA_ISOLATED_GUI_TEST=1 XDG_DATA_HOME="$(mktemp -d)" \
   XDG_CONFIG_HOME="$(mktemp -d)" xvfb-run -a python3 tests/manager-smoke.py
 ```
 
-图形脚本使用私有显示器 `:187`；如该显示器已被占用，请调整脚本，勿在已有用户桌面执行。CI 配置保留常规测试、独立 sanitizer 构建和包产物上传；本次尚未在 GitHub 运行 CI。
+图形脚本使用私有显示器 `:187`；如该显示器已被占用，请调整脚本，勿在已有用户桌面执行。GitHub Ubuntu 24.04 CI 已在提交 `6f827cc` 和 `4922f83` 通过常规测试及 AddressSanitizer/UndefinedBehaviorSanitizer，且启用了 LeakSanitizer；上述本地 chroot 限制不适用于 GitHub runner。CI 配置保留包产物上传；标签发布流程增加安装包的 GTK3/Qt5 与管理器复核，通过后创建 Pre-release。
 
 ## 未验证的桌面组合
 

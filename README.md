@@ -16,6 +16,8 @@ AI、项目索引、编辑器代码补全、云输入和同步不在本次 v0.2 
 
 ## 安装
 
+从 [GitHub Releases](https://github.com/pyaude/nova-pinyin/releases) 下载 Ubuntu 24.04 amd64 安装包及 `SHA256SUMS`。当前 v0.2.0 用于预发布验证，桌面兼容范围见发布说明。
+
 ```bash
 sudo apt install ./novapinyin_0.2.0-1_amd64.deb
 ```
