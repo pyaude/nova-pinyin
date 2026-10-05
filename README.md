@@ -1,6 +1,6 @@
 # NovaPinyin — Ubuntu 本地拼音输入法
 
-基于 Fcitx5 和 LibIME 的独立输入法引擎，当前开发版本为 **v0.3.0**，目标 Ubuntu 24.04 amd64。使用 Fcitx5 的候选 UI 与配置工具；个人词条在本机保存。
+基于 Fcitx5 和 LibIME 的独立输入法引擎，当前版本为 **v0.3.0**，目标 Ubuntu 24.04 amd64，按 Pre-release 提供试用验证。使用 Fcitx5 的候选 UI 与配置工具；个人词条在本机保存。
 
 开发版本号不代表已发布；可下载的安装包以 GitHub Release 为准。本地验证及仍需桌面验收的范围见 [验证记录](docs/validation.md)。
 
@@ -19,9 +19,10 @@ AI、编辑器语义集成、云输入和同步不在本次 v0.3 交付范围内
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/pyaude/nova-pinyin/releases) 下载 Ubuntu 24.04 amd64 安装包及 `SHA256SUMS`。当前版本用于预发布验证，桌面兼容范围见发布说明。
+从 [v0.3.0 GitHub Release](https://github.com/pyaude/nova-pinyin/releases/tag/v0.3.0) 下载 Ubuntu 24.04 amd64 安装包及 `SHA256SUMS`，保存到同一目录。当前版本用于预发布验证，桌面兼容范围见发布说明。
 
 ```bash
+sha256sum --check SHA256SUMS
 sudo apt install ./novapinyin_0.3.0-1_amd64.deb
 ```
 

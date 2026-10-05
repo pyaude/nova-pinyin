@@ -2,7 +2,7 @@
 
 发布包面向 Ubuntu 24.04 amd64；Ubuntu 26.04 应从源码或独立 CI 包安装，不复用未经验证的二进制。
 
-1. 下载包后运行 `sudo apt install ./novapinyin_0.3.0-1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
+1. 从 [v0.3.0 预发布](https://github.com/pyaude/nova-pinyin/releases/tag/v0.3.0) 下载 `novapinyin_0.3.0-1_amd64.deb` 和 `SHA256SUMS` 到同一目录，先运行 `sha256sum --check SHA256SUMS`，通过后运行 `sudo apt install ./novapinyin_0.3.0-1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
 2. 运行 `im-config`，选择 Fcitx5。记录此前使用的框架，按提示注销并重新登录。
 3. 打开“Fcitx 5 配置”，点击添加，取消“仅显示当前语言”筛选，添加“NovaPinyin 拼音”。按框架设置中的快捷键（通常 Ctrl+Space）启用。
 4. 输入 `nihao`，用 Space 或数字选词。单独 Shift 切换中英文。Enter 提交组合原文，下一次 Enter 才交给应用。
