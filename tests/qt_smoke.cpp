@@ -13,6 +13,10 @@ int main(int argc, char **argv) {
         std::ofstream out(argv[1]);
         out << s.toUtf8().constData();
     });
+    int activations = 0;
+    std::ofstream(std::string(argv[1]) + ".activated") << 0;
+    QObject::connect(&entry, &QLineEdit::returnPressed,
+                     [&] { std::ofstream(std::string(argv[1]) + ".activated") << ++activations; });
     entry.show();
     entry.setFocus();
     return app.exec();

@@ -17,15 +17,25 @@ struct Phrase {
     int count = 0;
     int weight = 0;
 };
+struct ProjectTerm {
+    std::string text;
+    int frequency = 1;
+};
+struct Project {
+    std::string name, root;
+    std::vector<ProjectTerm> terms;
+};
 struct Snapshot {
     uint64_t generation = 0;
     uint64_t clearEpoch = 0;
     std::vector<Phrase> phrases;
+    std::vector<Project> projects;
     std::string error;
 };
 std::filesystem::path dataHome();
 std::vector<Phrase> readDictionary(const std::filesystem::path &path);
 std::string normalizeReading(std::string reading);
+std::vector<ProjectTerm> readProjectTerms(const std::filesystem::path &path);
 class Database {
   public:
     explicit Database(const std::filesystem::path &path);
@@ -43,6 +53,10 @@ class Database {
     void exportUser(const std::filesystem::path &path);
     uint64_t generation();
     uint64_t clearEpoch();
+    void importProject(const std::string &name, const std::string &root,
+                       const std::vector<ProjectTerm> &terms, uint64_t expectedGeneration = 0);
+    std::vector<Project> projects();
+    void removeProject(const std::string &name);
 
   private:
     sqlite3 *db_ = nullptr;

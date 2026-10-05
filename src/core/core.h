@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "context.h"
 #include "store.h"
 #include <libime/pinyin/pinyincontext.h>
 #include <libime/pinyin/pinyinime.h>
@@ -41,6 +42,8 @@ class Session {
     explicit Session(std::shared_ptr<Backend> backend);
     void configure(Options options);
     bool type(std::string_view text);
+    void setContext(const std::string &text);
+    const std::string &contextHint() const { return hint_; }
     void backspace();
     void deleteForward();
     void move(int delta);
@@ -60,6 +63,7 @@ class Session {
     std::shared_ptr<Backend> backend_;
     libime::PinyinContext context_;
     Options options_;
+    std::string hint_;
     uint64_t revision_ = 1;
     std::vector<Candidate> snapshot_;
     std::vector<std::unique_ptr<libime::PinyinContext>> corrections_;

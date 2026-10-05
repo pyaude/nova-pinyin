@@ -35,8 +35,17 @@ struct Statement {
     }
 };
 void checkName(const std::string &name) {
-    if (name.empty() || name.size() > 80 || name.find_first_of("\r\n\t") != std::string::npos)
+    if (name.empty() || name.size() > 80 || !fcitx::utf8::validate(name) ||
+        name.find_first_of("\r\n\t") != std::string::npos || name.find('\0') != std::string::npos)
         throw std::runtime_error("词库名称不合法");
+}
+bool validIdentifier(const std::string &text) {
+    auto alpha = [](unsigned char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    };
+    return text.size() >= 3 && text.size() <= 64 && alpha(text.front()) &&
+           std::all_of(text.begin(), text.end(),
+                       [&](unsigned char c) { return alpha(c) || (c >= '0' && c <= '9'); });
 }
 } // namespace
 std::filesystem::path dataHome() {
@@ -118,6 +127,39 @@ std::vector<Phrase> readDictionary(const std::filesystem::path &path) {
         result.push_back(std::move(p));
     return result;
 }
+std::vector<ProjectTerm> readProjectTerms(const std::filesystem::path &path) {
+    if (std::filesystem::file_size(path) > 2 * 1024 * 1024)
+        throw std::runtime_error("项目索引超过 2 MiB");
+    std::ifstream in(path);
+    if (!in)
+        throw std::runtime_error("无法读取项目索引");
+    std::map<std::string, int> terms;
+    std::string line;
+    size_t number = 0;
+    while (std::getline(in, line)) {
+        ++number;
+        if (line.empty())
+            continue;
+        auto tab = line.find('\t');
+        if (line.size() > 80 || tab == std::string::npos ||
+            line.find('\t', tab + 1) != std::string::npos)
+            throw std::runtime_error("项目索引第 " + std::to_string(number) + " 行格式错误");
+        auto word = line.substr(0, tab), count = line.substr(tab + 1);
+        size_t used = 0;
+        int frequency = std::stoi(count, &used);
+        if (!validIdentifier(word) || used != count.size() || frequency < 1 || frequency > 1000000)
+            throw std::runtime_error("项目索引含非法标识符或频次");
+        terms[word] = frequency;
+        if (terms.size() > 20000)
+            throw std::runtime_error("项目标识符超过 20000 条");
+    }
+    if (in.bad())
+        throw std::runtime_error("项目索引读取失败");
+    std::vector<ProjectTerm> result;
+    for (const auto &[text, frequency] : terms)
+        result.push_back({text, frequency});
+    return result;
+}
 Database::Database(const std::filesystem::path &path) {
     std::filesystem::create_directories(path.parent_path());
     chmod(path.parent_path().c_str(), 0700);
@@ -134,11 +176,12 @@ Database::Database(const std::filesystem::path &path) {
         {
             Statement version(db_, "PRAGMA user_version");
             sqlite3_step(version.s);
-            if (sqlite3_column_int(version.s, 0) > 1)
+            if (sqlite3_column_int(version.s, 0) > 2)
                 throw std::runtime_error("数据库版本较新，请升级输入法");
         }
-        exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;"
-             "CREATE TABLE IF NOT EXISTS user_phrase(reading TEXT NOT NULL,phrase TEXT NOT "
+        exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+        exec("BEGIN IMMEDIATE; CREATE TABLE IF NOT EXISTS user_phrase(reading TEXT NOT NULL,phrase "
+             "TEXT NOT "
              "NULL,selection_count INTEGER NOT NULL DEFAULT 0 CHECK(selection_count>=0),last_used "
              "INTEGER NOT NULL,PRIMARY KEY(reading,phrase));"
              "CREATE TABLE IF NOT EXISTS dictionary(name TEXT PRIMARY KEY,enabled INTEGER NOT NULL "
@@ -148,7 +191,12 @@ Database::Database(const std::filesystem::path &path) {
              "INTEGER NOT NULL,PRIMARY KEY(name,reading,phrase));"
              "CREATE TABLE IF NOT EXISTS meta(id INTEGER PRIMARY KEY CHECK(id=1),generation "
              "INTEGER NOT NULL,clear_epoch INTEGER NOT NULL);"
-             "INSERT OR IGNORE INTO meta VALUES(1,1,1); PRAGMA user_version=1;");
+             "INSERT OR IGNORE INTO meta VALUES(1,1,1);"
+             "CREATE TABLE IF NOT EXISTS project(name TEXT PRIMARY KEY,root TEXT NOT NULL);"
+             "CREATE TABLE IF NOT EXISTS project_term(name TEXT NOT NULL REFERENCES project(name) "
+             "ON DELETE CASCADE,identifier TEXT NOT NULL,frequency INTEGER NOT NULL,PRIMARY "
+             "KEY(name,identifier));"
+             "PRAGMA user_version=2; COMMIT;");
     } catch (...) {
         sqlite3_close(db_);
         db_ = nullptr;
@@ -212,9 +260,85 @@ void Database::learnBatch(const std::vector<std::pair<Phrase, uint64_t>> &batch)
     }
 }
 void Database::clear() {
-    exec("BEGIN IMMEDIATE; DELETE FROM user_phrase; UPDATE meta SET "
+    exec("BEGIN IMMEDIATE; DELETE FROM user_phrase; DELETE FROM project; UPDATE meta SET "
          "generation=generation+1,clear_epoch=clear_epoch+1; "
          "COMMIT;");
+}
+void Database::importProject(const std::string &name, const std::string &root,
+                             const std::vector<ProjectTerm> &terms, uint64_t expectedGeneration) {
+    checkName(name);
+    if (root.empty() || root.size() > 4096 || root.find_first_of("\r\n\t") != std::string::npos ||
+        root.find('\0') != std::string::npos || !fcitx::utf8::validate(root) ||
+        !std::filesystem::path(root).is_absolute())
+        throw std::runtime_error("项目根目录必须为合法绝对路径");
+    if (terms.size() > 20000)
+        throw std::runtime_error("项目标识符超过 20000 条");
+    for (const auto &term : terms)
+        if (!validIdentifier(term.text) || term.frequency < 1 || term.frequency > 1000000)
+            throw std::runtime_error("项目标识符不合法");
+    exec("BEGIN IMMEDIATE");
+    try {
+        if (expectedGeneration && generation() != expectedGeneration)
+            throw std::runtime_error("数据版本已改变，索引已取消，请重试");
+        Statement p(
+            db_,
+            "INSERT INTO project VALUES(?,?) ON CONFLICT(name) DO UPDATE SET root=excluded.root");
+        p.bind(1, name);
+        p.bind(2, root);
+        p.done();
+        Statement del(db_, "DELETE FROM project_term WHERE name=?");
+        del.bind(1, name);
+        del.done();
+        Statement ins(db_, "INSERT INTO project_term VALUES(?,?,?)");
+        for (const auto &term : terms) {
+            sqlite3_reset(ins.s);
+            ins.bind(1, name);
+            ins.bind(2, term.text);
+            ins.number(3, term.frequency);
+            ins.done();
+        }
+        Statement count(
+            db_, "SELECT (SELECT COUNT(*) FROM project),(SELECT COUNT(*) FROM project_term)");
+        if (sqlite3_step(count.s) != SQLITE_ROW || sqlite3_column_int(count.s, 0) > 10 ||
+            sqlite3_column_int(count.s, 1) > 100000)
+            throw std::runtime_error("项目数超过 10 或总标识符超过 100000");
+        exec("UPDATE meta SET generation=generation+1; COMMIT;");
+    } catch (...) {
+        exec("ROLLBACK");
+        throw;
+    }
+}
+std::vector<Project> Database::projects() {
+    Statement q(db_, "SELECT p.name,p.root,t.identifier,t.frequency FROM project p LEFT JOIN "
+                     "project_term t ON p.name=t.name ORDER BY p.name,t.identifier");
+    std::vector<Project> result;
+    int status;
+    size_t total = 0;
+    while ((status = sqlite3_step(q.s)) == SQLITE_ROW) {
+        if (result.empty() || result.back().name != q.text(0))
+            result.push_back({q.text(0), q.text(1), {}});
+        if (sqlite3_column_type(q.s, 2) != SQLITE_NULL) {
+            if (++total > 100000)
+                throw std::runtime_error("项目索引过大");
+            result.back().terms.push_back({q.text(2), sqlite3_column_int(q.s, 3)});
+        }
+    }
+    if (status != SQLITE_DONE)
+        throw std::runtime_error("项目索引读取失败");
+    return result;
+}
+void Database::removeProject(const std::string &name) {
+    checkName(name);
+    exec("BEGIN IMMEDIATE");
+    try {
+        Statement q(db_, "DELETE FROM project WHERE name=?");
+        q.bind(1, name);
+        q.done();
+        exec("UPDATE meta SET generation=generation+1; COMMIT;");
+    } catch (...) {
+        exec("ROLLBACK");
+        throw;
+    }
 }
 void Database::importDictionary(const std::string &name, const std::vector<Phrase> &ps) {
     checkName(name);
@@ -354,6 +478,7 @@ void Store::run() {
                 next->generation = generation;
                 next->clearEpoch = db->clearEpoch();
                 next->phrases = db->phrases();
+                next->projects = db->projects();
                 {
                     std::lock_guard lock(mutex_);
                     snapshot_ = std::move(next);

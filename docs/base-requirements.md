@@ -2,7 +2,7 @@
 
 项目名称：**NovaPinyin**。GitHub 仓库为 [`pyaude/nova-pinyin`](https://github.com/pyaude/nova-pinyin)。
 
-文档状态：需求评审后的基线；本次用户确认交付至 v0.2。实际实现与验证状态见 [验证记录](validation.md)，后端选择见 [技术决策](backend-decision.md)。
+文档状态：需求评审后的基线；v0.2 已预发布，用户授权继续 v0.3。实际实现与验证状态见 [验证记录](validation.md)，后端选择见 [技术决策](backend-decision.md)，v0.3 交互与边界见 [高级输入](advanced-input.md)。
 评审日期：2026-10-05。
 
 本文区分产品要求、建议实现和待验证事项。版本号表示交付顺序，不代表已实现或已承诺的发布日期。接口与数据库示例用于说明设计约束，不是已经存在的代码。

@@ -2,13 +2,15 @@
 
 发布包面向 Ubuntu 24.04 amd64；Ubuntu 26.04 应从源码或独立 CI 包安装，不复用未经验证的二进制。
 
-1. 下载包后运行 `sudo apt install ./novapinyin_0.2.0-1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
+1. 下载包后运行 `sudo apt install ./novapinyin_0.3.0-1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
 2. 运行 `im-config`，选择 Fcitx5。记录此前使用的框架，按提示注销并重新登录。
 3. 打开“Fcitx 5 配置”，点击添加，取消“仅显示当前语言”筛选，添加“NovaPinyin 拼音”。按框架设置中的快捷键（通常 Ctrl+Space）启用。
 4. 输入 `nihao`，用 Space 或数字选词。单独 Shift 切换中英文。Enter 提交组合原文，下一次 Enter 才交给应用。
 5. 在应用菜单打开“NovaPinyin 词库管理”，设置双拼、模糊音、繁体等，或安装附带的示例词库。
 
 配置也可从 Fcitx5 的输入法设置打开。双拼方案：自然码、小鹤、微软。中文模式支持常用标点；终端默认半角。表情候选包括 `xiaolian`、`zan`、`aixin`、`qingzhu` 等。
+
+v0.3 新增的上下文与显式补全默认关闭。启用开发者补全后，按 `Ctrl+Alt+Space` 进入，Space 输入空格，Tab/Enter 只提交选中的文字，Esc 或失焦取消。项目需用户指定目录并显式索引。配置、忽略规则及 v0.2 升级/回退说明见 [高级输入](advanced-input.md)。
 
 ## GNOME / Wayland
 

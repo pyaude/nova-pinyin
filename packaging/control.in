@@ -1,12 +1,13 @@
 Package: novapinyin
-Version: 0.2.0-1
+Version: 0.3.0-1
 Section: utils
 Priority: optional
 Architecture: amd64
 Maintainer: NovaPinyin contributors <noreply@github.com>
-Depends: @DEPENDS@, fcitx5 (>= 5.0.21), libime-data, fcitx5-config-qt, fcitx5-frontend-gtk3, fcitx5-frontend-gtk4, fcitx5-frontend-qt5, im-config, python3, python3-tk
+Depends: @DEPENDS@, fcitx5 (>= 5.0.21), libime-data, fcitx5-config-qt, fcitx5-frontend-gtk3, fcitx5-frontend-gtk4, fcitx5-frontend-qt5, im-config, python3, python3-tk, git
 Homepage: https://github.com/pyaude/nova-pinyin
 Description: Local-first Chinese pinyin input method for Ubuntu
  Fcitx5 addon with full pinyin, double pinyin, configurable fuzzy matching,
  bounded typo correction, local learning, dictionaries, traditional Chinese,
- emoji candidates and a local dictionary manager.
+ emoji candidates, opt-in context ranking, explicit developer completions,
+ user-selected project identifier indexes and a local dictionary manager.

@@ -12,6 +12,11 @@ export XDG_CONFIG_HOME="$test_dir/config"
 export XDG_DATA_HOME="$test_dir/data"
 export XDG_RUNTIME_DIR="$test_dir/run"
 mkdir -p "$XDG_CONFIG_HOME/fcitx5" "$XDG_DATA_HOME" "$XDG_RUNTIME_DIR"
+mkdir -p "$XDG_CONFIG_HOME/fcitx5/conf"
+cat > "$XDG_CONFIG_HOME/fcitx5/conf/novapinyin.conf" <<'CONFIG'
+Developer=True
+Context=True
+CONFIG
 chmod 700 "$XDG_RUNTIME_DIR"
 export XMODIFIERS=@im=fcitx GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx
 cat > "$XDG_CONFIG_HOME/fcitx5/profile" <<'PROFILE'
@@ -66,6 +71,30 @@ actual=Path(sys.argv[1]).read_text()
 assert actual == '你好', repr(actual)
 print(f'{Path(sys.argv[1]).stem}: real frontend committed 你好')
 PY
+  xdotool key ctrl+alt+space
+  xdotool type --clearmodifiers --delay 100 'cancel123'
+  xdotool key ctrl+alt+space
+  sleep 0.2
+  python3 - "$test_dir/$toolkit.txt" <<'PY'
+from pathlib import Path
+import sys
+assert Path(sys.argv[1]).read_text() == '你好', 'Exit chord committed the prefix'
+PY
+  xdotool key ctrl+alt+space
+  xdotool type --clearmodifiers --delay 100 'git che'
+  xdotool key Return
+  sleep 0.8
+  python3 - "$test_dir/$toolkit.txt" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+assert path.read_text() == '你好git checkout', repr(path.read_text())
+assert Path(str(path) + '.activated').read_text() == '0', 'Selection Enter reached application'
+print(f'{path.stem}: explicit completion committed text; Enter consumed')
+PY
+  xdotool key Return
+  sleep 0.3
+  test "$(cat "$test_dir/$toolkit.txt.activated")" = 1
   kill "$client_pid"
   wait "$client_pid" 2>/dev/null || true
   client_pid=''

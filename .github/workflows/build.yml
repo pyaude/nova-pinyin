@@ -11,7 +11,7 @@ jobs:
       - name: Install development dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config libfcitx5core-dev libfcitx5config-dev libimecore-dev libimepinyin-dev libime-data libboost-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev python3-tk
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libfcitx5core-dev libfcitx5config-dev libimecore-dev libimepinyin-dev libime-data libboost-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev python3-tk git
       - name: Build, test and package
         run: ./scripts/build-deb.sh
       - name: Address and undefined behavior sanitizers

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core.h"
 #include <algorithm>
-#include <atomic>
 #include <cmath>
+#include <fcitx-utils/utf8.h>
 #include <filesystem>
 #include <libime/core/lattice.h>
 #include <libime/core/userlanguagemodel.h>
@@ -13,7 +13,6 @@
 #include <stdexcept>
 namespace nova {
 namespace {
-std::atomic<uint64_t> revisionCounter{1};
 std::string compact(std::string s) {
     s.erase(std::remove_if(s.begin(), s.end(), [](char c) { return c == ' ' || c == '\''; }),
             s.end());
@@ -96,7 +95,7 @@ int Backend::frequency(const std::string &r, const std::string &t) const {
 }
 Session::Session(std::shared_ptr<Backend> backend)
     : backend_(std::move(backend)), context_(backend_->ime()) {
-    revision_ = revisionCounter.fetch_add(1);
+    revision_ = nextRevision();
     context_.setMaxSentenceLength(128);
 }
 void Session::configure(Options o) {
@@ -105,7 +104,7 @@ void Session::configure(Options o) {
     clear();
 }
 void Session::changed() {
-    revision_ = revisionCounter.fetch_add(1);
+    revision_ = nextRevision();
     snapshot_.clear();
     corrections_.clear();
     learning_.clear();
@@ -119,6 +118,16 @@ bool Session::type(std::string_view s) {
 }
 void Session::clear() {
     context_.clear();
+    hint_.clear();
+    changed();
+}
+void Session::setContext(const std::string &text) {
+    // Context is frozen while composing; never reorder a visible list after client updates.
+    if (!empty())
+        return;
+    ContextBuffer buffer;
+    buffer.committed(text);
+    hint_ = buffer.text();
     changed();
 }
 bool Session::empty() const { return context_.empty(); }
@@ -186,19 +195,56 @@ std::vector<Candidate> Session::candidates() {
         }
         ++i;
     }
-    std::stable_sort(
-        snapshot_.begin(), snapshot_.end(), [this](const Candidate &a, const Candidate &b) {
-            // Do not boost a partial word over a full sentence just because it is frequent.
-            if (a.end != b.end)
-                return a.end > b.end;
-            auto boost = [this](const Candidate &c) {
-                const auto &original = context_.candidates()[c.backendIndex];
-                return -double(c.backendIndex) * 0.1 +
-                       std::min(4.0,
-                                std::log1p(backend_->frequency(c.reading, original.toString())));
-            };
-            return boost(a) > boost(b);
-        });
+    std::map<size_t, double> contextBoost;
+    if (!hint_.empty()) {
+        auto *model = backend_->ime()->model();
+        auto lmState = model->nullState();
+        // Greedy matching of up to four Unicode characters against the static LM vocabulary.
+        for (size_t offset = 0; offset < hint_.size();) {
+            auto start = hint_.begin() + offset;
+            size_t available = std::min<size_t>(4, fcitx::utf8::length(start, hint_.end()));
+            size_t bytes = fcitx::utf8::ncharByteLength(start, 1);
+            for (size_t length = available; length > 0; --length) {
+                auto size = fcitx::utf8::ncharByteLength(start, length);
+                auto word = std::string_view(hint_).substr(offset, size);
+                auto index = model->index(word);
+                if (!model->isUnknown(index, word)) {
+                    libime::State next;
+                    model->score(lmState, libime::WordNode(word, index), next);
+                    lmState = next;
+                    bytes = size;
+                    break;
+                }
+            }
+            offset += bytes;
+        }
+        for (const auto &c : snapshot_) {
+            if (c.backendIndex >= 20 || !c.annotation.empty())
+                continue;
+            std::vector<std::string_view> words;
+            for (const auto *node : context_.candidates()[c.backendIndex].sentence())
+                words.push_back(node->word());
+            auto delta =
+                model->wordsScore(lmState, words) - model->wordsScore(model->nullState(), words);
+            if (std::isfinite(delta))
+                contextBoost[c.backendIndex] = std::clamp(double(delta) * 0.2, -0.6, 0.6);
+        }
+    }
+    std::stable_sort(snapshot_.begin(), snapshot_.end(),
+                     [this, &contextBoost](const Candidate &a, const Candidate &b) {
+                         // Do not boost a partial word over a full sentence just because it is
+                         // frequent.
+                         if (a.end != b.end)
+                             return a.end > b.end;
+                         auto boost = [this, &contextBoost](const Candidate &c) {
+                             const auto &original = context_.candidates()[c.backendIndex];
+                             return -double(c.backendIndex) * 0.1 +
+                                    std::min(4.0, std::log1p(backend_->frequency(
+                                                      c.reading, original.toString()))) +
+                                    contextBoost[c.backendIndex];
+                         };
+                         return boost(a) > boost(b);
+                     });
     if (options_.typo && !options_.shuangpin && !complete && context_.selectedLength() == 0 &&
         context_.size() >= 3 && context_.size() <= 32) {
         const auto raw = context_.userInput();
