@@ -1,6 +1,6 @@
 # Ubuntu 拼音输入法需求与开发规划
 
-项目代号：**NovaPinyin**。仓库目前使用 `xpinyin`，正式名称另行确定。
+项目名称：**NovaPinyin**。GitHub 仓库为 [`pyaude/nova-pinyin`](https://github.com/pyaude/nova-pinyin)。
 
 文档状态：需求评审后的基线；本次用户确认交付至 v0.2。实际实现与验证状态见 [验证记录](validation.md)，后端选择见 [技术决策](backend-decision.md)。
 评审日期：2026-10-05。
