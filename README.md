@@ -23,14 +23,14 @@ AI、编辑器语义集成、云输入和同步不在 v1.0 交付范围内。Nov
 
 | 系统 | 安装包 | 首次启用 |
 | --- | --- | --- |
-| Ubuntu 20.04 amd64（X11） | `novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb` | 安装后注销重登录或重启，自动设置 |
-| Ubuntu 24.04 amd64 | `novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` | im-config 选择 Fcitx5，重登录后添加 NovaPinyin |
+| Ubuntu 20.04 amd64（X11） | `novapinyin_1.0.0-1.ubuntu20.04.1_amd64.deb` | 安装后注销重登录或重启，自动设置 |
+| Ubuntu 24.04 amd64 | `novapinyin_1.0.0-1.ubuntu24.04.1_amd64.deb` | im-config 选择 Fcitx5，重登录后添加 NovaPinyin |
 
 以下是 Ubuntu 24.04 示例；只下载所需资产时用 `--ignore-missing` 检查现有文件。
 
 ```bash
 sha256sum --ignore-missing --check SHA256SUMS
-sudo apt install ./novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb
+sudo apt install ./novapinyin_1.0.0-1.ubuntu24.04.1_amd64.deb
 ```
 
 运行 `im-config` 选择 Fcitx5、注销重登录，再通过“Fcitx 5 配置”添加 NovaPinyin 拼音。完整步骤、GNOME/Wayland 注意事项和卸载恢复见 [安装说明](docs/install.md)。
@@ -48,7 +48,7 @@ sudo apt-get install build-essential cmake ninja-build pkg-config \
 ./scripts/build-deb.sh
 ```
 
-脚本先构建和测试，再根据真实库依赖生成 `dist/novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` 与 SHA256 校验文件。只需要构建时：
+脚本先构建和测试，再根据真实库依赖生成 `dist/novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` 与 SHA256 校验文件。本地构建文件名保留 Debian 版本中的 `~`；Release 文件名规范为点，以保持 GitHub 资产名及校验文件一致。只需要构建时：
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug

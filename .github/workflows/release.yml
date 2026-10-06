@@ -84,6 +84,11 @@ jobs:
           test -f "novapinyin_${version}~ubuntu20.04.1_amd64.deb"
           test -f "novapinyin_${version}~ubuntu24.04.1_amd64.deb"
           test -f "novapinyin_${version}~ubuntu20.04.1_sources.tar.gz"
+          # GitHub replaces ~ during upload. Normalize before hashing/uploading.
+          for asset in *.deb *_sources.tar.gz; do
+            safe_name=$(printf '%s' "$asset" | tr '~' '.')
+            if [ "$asset" != "$safe_name" ]; then mv "$asset" "$safe_name"; fi
+          done
           sha256sum *.deb *_sources.tar.gz > SHA256SUMS
           sha256sum --check SHA256SUMS
       - name: Publish stable release

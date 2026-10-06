@@ -4,7 +4,7 @@ v1.0.0 正式版分别提供 Ubuntu 20.04、24.04 amd64 安装包。运行 `lsb_
 
 ## Ubuntu 24.04 包
 
-1. 从 [v1.0.0 正式版](https://github.com/pyaude/nova-pinyin/releases/tag/v1.0.0) 下载 `novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` 和 `SHA256SUMS` 到同一目录，先运行 `sha256sum --ignore-missing --check SHA256SUMS`，通过后运行 `sudo apt install ./novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
+1. 从 [v1.0.0 正式版](https://github.com/pyaude/nova-pinyin/releases/tag/v1.0.0) 下载 `novapinyin_1.0.0-1.ubuntu24.04.1_amd64.deb` 和 `SHA256SUMS` 到同一目录，先运行 `sha256sum --ignore-missing --check SHA256SUMS`，通过后运行 `sudo apt install ./novapinyin_1.0.0-1.ubuntu24.04.1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
 2. 运行 `im-config`，选择 Fcitx5。记录此前使用的框架，按提示注销并重新登录。
 3. 打开“Fcitx 5 配置”，点击添加，取消“仅显示当前语言”筛选，添加“NovaPinyin 拼音”。按框架设置中的快捷键（通常 Ctrl+Space）启用。
 4. 输入 `nihao`，用 Space 或数字选词。单独 Shift 切换中英文。Enter 提交组合原文，下一次 Enter 才交给应用。
@@ -20,13 +20,13 @@ v0.3 新增的上下文与显式补全默认关闭。启用开发者补全后，
 
 ## Ubuntu 20.04 专用包
 
-Ubuntu 20.04 amd64 使用单独的正式包 `novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb`，不要安装上述 Ubuntu 24.04 包。安装包及完整匹配源码归档从同一个 v1.0.0 Release 下载；本地构建产物位于 `dist/ubuntu20.04/`。
+Ubuntu 20.04 amd64 使用单独的正式包 `novapinyin_1.0.0-1.ubuntu20.04.1_amd64.deb`，不要安装上述 Ubuntu 24.04 包。安装包及完整匹配源码归档从同一个 v1.0.0 Release 下载；本地构建产物位于 `dist/ubuntu20.04/`。
 
 将专用 `.deb` 和该目录的 `SHA256SUMS` 保存到同一目录，执行：
 
 ```bash
 sha256sum --ignore-missing --check SHA256SUMS
-sudo apt install --no-install-recommends ./novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb
+sudo apt install --no-install-recommends ./novapinyin_1.0.0-1.ubuntu20.04.1_amd64.deb
 ```
 
 安装完成后，注销并重新登录 **X11/Xorg 会话**，或重启一次。v1.0 会在首次登录自动备份原输入法选择、启用 NovaPinyin、配置 GTK/Qt/XIM 环境并启动专用框架；无需手动运行 `im-config` 或添加输入法。已运行应用的环境不能由安装程序追溯修改，因此仍需这一次重新登录。首次启用已包含键盘和 NovaPinyin，按 Ctrl+Space 切换，再输入 `nihao` 用 Space 选词。应用菜单中的“NovaPinyin 输入法配置”用于调整输入法列表，“NovaPinyin设置”用于输入设置、词库和项目管理；也可运行 `novapinyin-fcitx5-configtool` 和 `novapinyin-manager`。
