@@ -17,7 +17,7 @@ apt-get install -y --no-install-recommends gcc-10 g++-10 cmake ninja-build \
   libboost-filesystem-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev \
   python3-tk libgtk-3-dev qtbase5-dev qtbase5-private-dev libqt5x11extras5-dev \
   libkf5itemviews-dev libkf5widgetsaddons-dev xvfb xauth xdotool dbus-x11 \
-  fcitx5-frontend-gtk3 fcitx5-frontend-qt5 im-config
+  fcitx5-frontend-gtk3 fcitx5-frontend-qt5 im-config iso-codes xkb-data
 python3 -m pip install cmake==3.28.3
 ./scripts/build-focal-deb.sh
 
