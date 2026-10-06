@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    echo 'NovaPinyin 已安装。下次 X11 登录将自动完成输入法设置；请注销并重新登录，或重启一次。'
+fi

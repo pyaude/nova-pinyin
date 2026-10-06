@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ] && [ -x /usr/bin/novapinyin-session-setup ]; then
+    /usr/bin/novapinyin-session-setup --restore-all || true
+fi

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/core.h"
 #include <fcitx-utils/utf8.h>
+#include <cstdlib>
 #include <fstream>
 #include <future>
 #include <gtest/gtest.h>
-#include <unistd.h>
 using namespace nova;
 namespace {
 std::filesystem::path directory() {
-    static unsigned n = 0;
-    auto p = std::filesystem::temp_directory_path() /
-             ("nova-test-" + std::to_string(getpid()) + "-" + std::to_string(n++));
-    std::filesystem::create_directories(p);
-    return p;
+    auto pattern = (std::filesystem::temp_directory_path() / "nova-test-XXXXXX").string();
+    auto *created = mkdtemp(pattern.data());
+    if (!created)
+        throw std::runtime_error("Cannot create isolated test directory");
+    return created;
 }
 std::shared_ptr<Backend> base() {
     static auto b = std::make_shared<Backend>();
@@ -204,6 +204,10 @@ TEST(Dictionary, RejectMalformed) {
 TEST(Dictionary, BundledExamples) {
     EXPECT_EQ(readDictionary(std::string(NOVA_SOURCE_DIR) + "/data/semiconductor.tsv").size(), 5);
     EXPECT_EQ(readDictionary(std::string(NOVA_SOURCE_DIR) + "/data/programming.tsv").size(), 5);
+    EXPECT_EQ(readDictionary(std::string(NOVA_SOURCE_DIR) + "/data/dictionaries/rime-common.tsv").size(),
+              20000);
+    EXPECT_EQ(readDictionary(std::string(NOVA_SOURCE_DIR) + "/data/dictionaries/rime-ice.tsv").size(),
+              162);
 }
 TEST(Storage, PersistenceExportAndClear) {
     auto dir = directory();

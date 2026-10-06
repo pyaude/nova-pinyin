@@ -1,0 +1,18 @@
+[
+  {
+    "name": "rime-common",
+    "title": "Rime 常用词精选",
+    "file": "rime-common.tsv",
+    "count": 20000,
+    "license": "Apache-2.0",
+    "source": "https://github.com/rime/rime-pinyin-simp"
+  },
+  {
+    "name": "rime-ice",
+    "title": "雾凇社区补充词",
+    "file": "rime-ice.tsv",
+    "count": 162,
+    "license": "GPL-3.0",
+    "source": "https://github.com/iDvel/rime-ice"
+  }
+]

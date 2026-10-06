@@ -106,6 +106,21 @@ TEST(Addon, EventsAndPrivacy) {
     send("Shift_L");
     send("Shift_L", true);
     EXPECT_FALSE(send("Control+c"));
+    EXPECT_FALSE(send("Down")); // no composition: let the application handle arrows
+    for (char c : std::string("hao"))
+        send(std::string(1, c));
+    auto paging = client.inputPanel().candidateList();
+    ASSERT_TRUE(paging);
+    ASSERT_TRUE(paging->toPageable()->hasNext());
+    const auto firstPage = paging->candidate(0).text().toString();
+    EXPECT_FALSE(send("Control+Down"));
+    EXPECT_TRUE(send("Down"));
+    EXPECT_NE(paging->candidate(0).text().toString(), firstPage);
+    EXPECT_TRUE(send("Up"));
+    EXPECT_EQ(paging->candidate(0).text().toString(), firstPage);
+    EXPECT_TRUE(send("Up")); // first-page boundary does not leak to the application
+    EXPECT_EQ(paging->candidate(0).text().toString(), firstPage);
+    send("Escape");
     client.setCapabilityFlags(CapabilityFlag::Password);
     EXPECT_FALSE(send("n"));
     EXPECT_FALSE(client.inputPanel().candidateList());

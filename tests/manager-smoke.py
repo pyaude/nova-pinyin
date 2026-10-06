@@ -29,12 +29,27 @@ try:
     with patch("tkinter.messagebox.showinfo"), patch("tkinter.messagebox.showerror") as errors:
         app = manager["Manager"](root)
         root.update()
+        assert root.title() == "NovaPinyin设置"
+        theme_path = manager["config_path"]().with_name("classicui.conf")
+        theme_path.parent.mkdir(parents=True, exist_ok=True)
+        theme_path.write_text('Theme=custom\nFont=Sans 12\nFutureOption=keep\n[Future]\nTheme=preserved\n')
+        app.appearance.current(2)
         app.values["Shuangpin"].set(True)
         app.profile.current(1)
         app.save()
         assert "Shuangpin=True" in manager["config_path"]().read_text()
+        assert "ShuangpinProfile=1" in manager["config_path"]().read_text()
+        theme_text = theme_path.read_text()
+        assert theme_text.startswith('Theme=novapinyin-dark\nUseDarkTheme=False\n')
+        assert 'Font=Sans 12\nFutureOption=keep\n[Future]\nTheme=preserved\n' in theme_text
+        check_root = tk.Toplevel(root)
+        check_app = manager["Manager"](check_root)
+        assert check_app.appearance.current() == 2, "Section option overrode root theme"
+        check_root.destroy()
         app.examples()
         assert len(app.tree.get_children()) == 2
+        app.install_bundled(["rime-common", "rime-ice"])
+        assert len(app.tree.get_children()) == 4
         app.tree.selection_set(app.tree.get_children()[0])
         app.toggle()
         assert "0\t" in manager["run_tool"]("list")

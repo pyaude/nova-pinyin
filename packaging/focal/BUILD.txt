@@ -41,8 +41,14 @@ Installed private runtime: /usr/lib/novapinyin/focal/
 Personal data retains its normal XDG location. The framework configuration is
 isolated in XDG_CONFIG_HOME/novapinyin/fcitx5; existing system profiles are not
 changed. The engine settings file is copied once from the old location when
-starting the private runtime or its manager, with unknown options preserved. No install
-or remove scripts write user configuration or delete personal data. Starting
+starting the private runtime or its manager, with unknown options preserved.
+Revision .5 performs one-time activation as the logged-in user, before native
+im-config Xsession setup. It backs up the prior managed selection and corrects
+GTK/Qt/XIM values inherited from IBus. The installer does not guess or write a
+desktop user configuration as root. Removal restores only unchanged selections
+owned by this setup, using each user account; personal data is never deleted.
+Later user choices and manually maintained .xinputrc files are preserved.
+A logout/login or reboot is required after installation. Starting
 novapinyin-fcitx5 explicitly creates an initial profile only when none exists.
 Existing profiles can be managed using novapinyin-fcitx5-configtool.
 
@@ -51,6 +57,15 @@ the installed private configuration in independent D-Bus/Xvfb sessions:
 
 NOVA_ISOLATED_GUI_TEST=1 xvfb-run -a python3 tests/focal-imconfig-test.py
 NOVA_ISOLATED_GUI_TEST=1 xvfb-run -a python3 tests/focal-package-smoke.py
+
+In an isolated Focal Docker container only, run as root to create disposable
+users and exercise automatic login, real GTK/Qt Ctrl+Space input, backups,
+user overrides, interrupted setup, and actual apt remove/reinstall:
+
+NOVA_ISOLATED_GUI_TEST=1 python3 tests/focal-session-setup-test.py
+
+This test intentionally removes/reinstalls the package in that container. It
+requires the matching .deb and built smoke clients under /project/.
 
 Build GTK3/Qt5 smoke clients with NOVA_GUI_SMOKE=ON. With fonts-noto-cjk
 installed for Chinese glyph rendering, verify the actual selected-candidate

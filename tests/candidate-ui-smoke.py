@@ -94,7 +94,11 @@ with tempfile.TemporaryDirectory(prefix='nova-candidate-ui-') as temporary:
                 return int(result.stdout.splitlines()[-1])
             time.sleep(0.1)
         raise AssertionError('Window did not appear: ' + name)
-    for theme, background in (('default', 0x808080), ('default-dark', 0x606060)):
+    themes = ['novapinyin', 'novapinyin-dark']
+    if daemon_binary == 'novapinyin-fcitx5':
+        themes += ['default', 'default-dark']
+    for theme in themes:
+        background = 0x1d4ed8
         (config / 'conf/classicui.conf').write_text('Theme=' + theme + '\nUseDarkTheme=False\n')
         with (root / (theme + '.log')).open('w') as log:
             daemon = subprocess.Popen([daemon_binary, '--disable=wayland,ibus,kimpanel'],
@@ -102,15 +106,23 @@ with tempfile.TemporaryDirectory(prefix='nova-candidate-ui-') as temporary:
             try:
                 time.sleep(1)
                 for toolkit in ('gtk', 'qt'):
-                    output = root / (toolkit + '.txt')
+                    output = root / (toolkit + '-' + theme + '.txt')
                     client = subprocess.Popen([str(build / ('nova-' + toolkit + '-smoke')), str(output)],
                         env=environment, stdout=log, stderr=log)
                     try:
                         window = window_named('NovaPinyin ' + ('GTK' if toolkit == 'gtk' else 'Qt') + ' Smoke')
                         run('xdotool', 'windowfocus', '--sync', str(window))
                         run('xdotool', 'mousemove', '--window', str(window), '40', '30', 'click', '1')
-                        run(remote, '-s', 'novapinyin')
-                        run(remote, '-o')
+                        deadline = time.monotonic() + 10
+                        while time.monotonic() < deadline:
+                            assert daemon.poll() is None, 'Input daemon exited'
+                            run(remote, '-s', 'novapinyin')
+                            run(remote, '-o')
+                            if run(remote, '-n') == 'novapinyin' and run(remote) == '2':
+                                break
+                            time.sleep(0.1)
+                        else:
+                            raise AssertionError('Client input context did not activate')
                         run('xdotool', 'type', '--clearmodifiers', '--delay', '100', 'hao')
                         candidate_window = window_named('Fcitx5 Input Window')
                         time.sleep(0.2)
@@ -126,6 +138,15 @@ with tempfile.TemporaryDirectory(prefix='nova-candidate-ui-') as temporary:
                         assert text_pixels > 30, 'Selected candidate text is not visible'
                         height, width = len(pixels), len(pixels[0])
                         assert width > 2 * height, 'Pinyin candidates are not horizontal: %dx%d' % (width, height)
+                        assert width >= 400, 'Candidate spacing did not increase'
+                        run('xdotool', 'key', 'Down')
+                        time.sleep(0.2)
+                        paged_pixels = snapshot(candidate_window)
+                        assert pixels != paged_pixels, 'Down did not change the candidate page'
+                        assert not output.exists() or not output.read_text(), 'Paging committed text'
+                        run('xdotool', 'key', 'Up')
+                        time.sleep(0.2)
+                        assert snapshot(candidate_window) == pixels, 'Up did not restore the first candidate page'
                         run('xdotool', 'key', 'space')
                         deadline = time.monotonic() + 5
                         while time.monotonic() < deadline:
@@ -134,10 +155,11 @@ with tempfile.TemporaryDirectory(prefix='nova-candidate-ui-') as temporary:
                             time.sleep(0.1)
                         else:
                             raise AssertionError('Selected visible candidate did not commit 好')
-                        print('%s %s: selected text visible, horizontal %dx%d, committed 好' % (toolkit, theme, width, height))
+                        print('%s %s: visible blue highlight, spaced horizontal %dx%d, Down/Up paging, committed 好' % (toolkit, theme, width, height))
                     finally:
                         client.terminate()
                         client.wait(timeout=10)
             finally:
                 daemon.terminate()
                 daemon.wait(timeout=10)
+                (artifacts / (theme + '.log')).write_bytes((root / (theme + '.log')).read_bytes())

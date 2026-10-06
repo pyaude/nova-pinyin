@@ -2,21 +2,20 @@
 #include "core/completion.h"
 #include "core/context.h"
 #include "core/core.h"
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <set>
 #include <sqlite3.h>
-#include <unistd.h>
 using namespace nova;
 namespace {
 std::filesystem::path path() {
-    static int counter = 0;
-    auto directory =
-        std::filesystem::temp_directory_path() /
-        ("nova-advanced-" + std::to_string(getpid()) + "-" + std::to_string(counter++));
-    std::filesystem::create_directories(directory);
-    return directory;
+    auto pattern = (std::filesystem::temp_directory_path() / "nova-advanced-XXXXXX").string();
+    auto *created = mkdtemp(pattern.data());
+    if (!created)
+        throw std::runtime_error("Cannot create isolated test directory");
+    return created;
 }
 } // namespace
 TEST(Completion, ExplicitModeAndSpaces) {

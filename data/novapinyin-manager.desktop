@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=NovaPinyin Dictionary Manager
-Name[zh_CN]=NovaPinyin 词库管理
-Comment=Manage local dictionaries and personal learning data
-Comment[zh_CN]=管理本地词库与个人学习数据
+Name=NovaPinyin Settings
+Name[zh_CN]=NovaPinyin设置
+Comment=Configure input, appearance and local dictionaries
+Comment[zh_CN]=设置双拼、候选外观与本地词库
 Exec=novapinyin-manager
 Icon=input-keyboard
 Terminal=false

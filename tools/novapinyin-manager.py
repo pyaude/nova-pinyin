@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import concurrent.futures
+import json
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 
@@ -37,7 +38,7 @@ def int_setting(saved, key, default, minimum, maximum):
 class Manager:
     def __init__(self, root):
         self.root = root
-        root.title("NovaPinyin 设置与词库管理")
+        root.title("NovaPinyin设置")
         root.geometry("840x760")
         notebook = ttk.Notebook(root)
         notebook.pack(fill="both", expand=True, padx=12, pady=12)
@@ -93,13 +94,28 @@ class Manager:
         self.profile = ttk.Combobox(settings, values=["自然码", "小鹤", "微软"], state="readonly", width=12)
         self.profile.current(int_setting(saved, "ShuangpinProfile", 0, 0, 2))
         self.profile.grid(row=10, column=1, sticky="w")
-        ttk.Label(settings, text="补全快捷键（Fcitx5 格式）：").grid(row=11, column=0, sticky="w", padx=14)
-        ttk.Entry(settings, textvariable=self.developer_key, width=34).grid(row=11, column=1, sticky="w")
-        ttk.Label(settings, text="应用提示覆盖（如 kitty=terminal;code=editor）：").grid(row=12, column=0, sticky="w", padx=14, pady=10)
-        ttk.Entry(settings, textvariable=self.app_overrides, width=34).grid(row=12, column=1, sticky="w")
-        ttk.Button(settings, text="保存设置", command=lambda: self.guard(self.save)).grid(row=13, column=0, pady=18)
-        ttk.Button(settings, text="恢复默认设置", command=self.reset).grid(row=13, column=1)
-        ttk.Label(settings, text="补全模式：Space 输入空格，↑↓ 选择，Tab/Enter 提交文字，Esc 退出。\n隐私模式禁用上下文、补全与个人词条；不会保存完整输入历史。", wraplength=800).grid(row=14, column=0, columnspan=2, padx=14, sticky="w")
+        ttk.Label(settings, text="候选配色：").grid(row=11, column=0, sticky="w", padx=14)
+        self.appearance = ttk.Combobox(settings, values=["保留当前主题", "NovaPinyin 浅色", "NovaPinyin 深色"], state="readonly", width=20)
+        current_theme = {}
+        try:
+            for line in config_path().with_name("classicui.conf").read_text().splitlines():
+                line = line.strip()
+                if line.startswith("["):
+                    break
+                if "=" in line and not line.startswith("#"):
+                    key, value = line.split("=", 1)
+                    current_theme[key.strip()] = value.strip()
+        except FileNotFoundError:
+            pass
+        self.appearance.current({"novapinyin": 1, "novapinyin-dark": 2}.get(current_theme.get("Theme"), 0))
+        self.appearance.grid(row=11, column=1, sticky="w")
+        ttk.Label(settings, text="补全快捷键（Fcitx5 格式）：").grid(row=12, column=0, sticky="w", padx=14)
+        ttk.Entry(settings, textvariable=self.developer_key, width=34).grid(row=12, column=1, sticky="w")
+        ttk.Label(settings, text="应用提示覆盖（如 kitty=terminal;code=editor）：").grid(row=13, column=0, sticky="w", padx=14, pady=10)
+        ttk.Entry(settings, textvariable=self.app_overrides, width=34).grid(row=13, column=1, sticky="w")
+        ttk.Button(settings, text="保存设置", command=lambda: self.guard(self.save)).grid(row=14, column=0, pady=18)
+        ttk.Button(settings, text="恢复默认设置", command=self.reset).grid(row=14, column=1)
+        ttk.Label(settings, text="拼音候选：↓ 下一页，↑ 上一页，空格或数字选词。\n补全模式：Space 输入空格，↑↓ 选择，Tab/Enter 提交文字，Esc 退出。", wraplength=800).grid(row=15, column=0, columnspan=2, padx=14, sticky="w")
         self.tree = ttk.Treeview(dictionaries, columns=("enabled",), show="tree headings", height=12)
         self.tree.heading("#0", text="词库")
         self.tree.heading("enabled", text="状态")
@@ -109,7 +125,7 @@ class Manager:
         buttons.pack(fill="x", padx=12)
         for label, callback in [("导入 TSV", self.import_dict), ("启用 / 禁用", self.toggle),
                                 ("移除词库", self.remove), ("安装示例词库", self.examples),
-                                ("刷新", self.refresh)]:
+                                ("安装内置词库…", self.choose_bundled), ("刷新", self.refresh)]:
             ttk.Button(buttons, text=label, command=lambda c=callback: self.guard(c)).pack(side="left", padx=3)
         personal = ttk.Frame(dictionaries)
         personal.pack(pady=18)
@@ -166,6 +182,22 @@ class Manager:
         temporary.write_text(text)
         temporary.chmod(0o600)
         temporary.replace(path)
+        if self.appearance.current() > 0:
+            theme_path = path.with_name("classicui.conf")
+            lines = theme_path.read_text().splitlines() if theme_path.exists() else []
+            settings = {"Theme": "novapinyin" if self.appearance.current() == 1 else "novapinyin-dark", "UseDarkTheme": "False"}
+            output = [key + "=" + value for key, value in settings.items()]
+            at_root = True
+            for line in lines:
+                if line.lstrip().startswith("["):
+                    at_root = False
+                key = line.split("=", 1)[0].strip() if "=" in line and not line.startswith(("#", "[")) else ""
+                if not at_root or key not in settings:
+                    output.append(line)
+            temporary_theme = theme_path.with_suffix(".tmp")
+            temporary_theme.write_text("\n".join(output) + "\n")
+            temporary_theme.chmod(0o600)
+            temporary_theme.replace(theme_path)
         # -r asks the existing daemon to reload configuration; never replace the desktop framework.
         try:
             subprocess.run(["fcitx5-remote", "-r"], timeout=5, capture_output=True, check=False)
@@ -221,6 +253,35 @@ class Manager:
         for name in ("semiconductor", "programming"):
             run_tool("import", name, f"/usr/share/novapinyin/{name}.tsv")
         self.refresh()
+
+    def install_bundled(self, names):
+        directory = Path("/usr/share/novapinyin/dictionaries")
+        catalog = json.loads((directory / "manifest.json").read_text())
+        for item in catalog:
+            if item["name"] in names:
+                run_tool("import", item["name"], str(directory / item["file"]))
+        self.refresh()
+
+    def choose_bundled(self):
+        directory = Path("/usr/share/novapinyin/dictionaries")
+        catalog = json.loads((directory / "manifest.json").read_text())
+        dialog = tk.Toplevel(self.root)
+        dialog.title("安装内置词库")
+        dialog.transient(self.root)
+        choices = []
+        ttk.Label(dialog, text="词库已随安装包提供，无需联网。\n安装后可在本地词库列表启用、禁用或移除。", padding=12).pack(anchor="w")
+        for item in catalog:
+            selected = tk.BooleanVar(value=False)
+            choices.append((item["name"], selected))
+            ttk.Checkbutton(dialog, text=f'{item["title"]} · {item["count"]} 条 · {item["license"]}', variable=selected).pack(anchor="w", padx=12, pady=6)
+            ttk.Label(dialog, text=item["source"]).pack(anchor="w", padx=30)
+        def install():
+            names = [name for name, selected in choices if selected.get()]
+            if not names:
+                return
+            self.install_bundled(names)
+            dialog.destroy()
+        ttk.Button(dialog, text="安装选中词库", command=lambda: self.guard(install)).pack(pady=12)
 
     def export(self):
         path = filedialog.asksaveasfilename(title="导出个人词条", defaultextension=".tsv")

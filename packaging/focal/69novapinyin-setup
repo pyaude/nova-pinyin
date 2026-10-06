@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sourced by Xsession before 70im-config_launch, as the logged-in user.
+if [ -x /usr/bin/novapinyin-session-setup ] && \
+   [ "${XDG_SESSION_TYPE:-x11}" = x11 ]; then
+    if /usr/bin/novapinyin-session-setup --auto; then
+        NOVA_SESSION_METHOD=$(/usr/bin/im-config -m | sed -n '2p')
+        if [ "$NOVA_SESSION_METHOD" = novapinyin ]; then
+            IM_CONFIG_PHASE=1
+            export IM_CONFIG_PHASE
+            # Apply even if the parent login process inherited old IBus values.
+            . /usr/share/im-config/data/77_novapinyin.rc
+            unset QT4_IM_MODULE CLUTTER_IM_MODULE
+        fi
+        unset NOVA_SESSION_METHOD
+    fi
+fi

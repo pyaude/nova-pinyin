@@ -102,6 +102,7 @@ class Engine : public InputMethodEngine {
                     invalidate(static_cast<InputContextEvent &>(event).inputContext());
                 }));
         reloadConfig();
+        initialized_ = true;
         timer_ =
             instance_->eventLoop().addTimeEvent(CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 1000000, 0,
                                                 [this](EventSourceTime *event, uint64_t) {
@@ -291,11 +292,12 @@ class Engine : public InputMethodEngine {
                 return;
             }
             auto list = ic->inputPanel().candidateList();
-            if (sym == FcitxKey_Page_Up || sym == FcitxKey_Page_Down) {
+            if (sym == FcitxKey_Page_Up || sym == FcitxKey_Page_Down ||
+                sym == FcitxKey_Up || sym == FcitxKey_Down) {
                 if (list) {
                     auto *p = list->toPageable();
                     if (p) {
-                        if (sym == FcitxKey_Page_Up)
+                        if (sym == FcitxKey_Page_Up || sym == FcitxKey_Up)
                             p->prev();
                         else
                             p->next();
@@ -366,6 +368,7 @@ class Engine : public InputMethodEngine {
 
   private:
     Instance *instance_;
+    bool initialized_ = false;
     Config config_;
     FactoryFor<InputState> factory_;
     std::shared_ptr<Backend> backend_, privateBackend_;
@@ -529,6 +532,10 @@ class Engine : public InputMethodEngine {
     void apply() {
         backend_->configure(options());
         privateBackend_->configure(options());
+        // Existing contexts have no NovaPinyin sessions during construction.
+        // Querying their engine here would recursively load this on-demand addon.
+        if (!initialized_)
+            return;
         instance_->inputContextManager().foreach ([this](InputContext *ic) {
             invalidate(ic);
             if (ic->hasFocus() && instance_->inputMethodEngine(ic) == this) {

@@ -1,0 +1,34 @@
+[
+  {
+    "name": "rime-common",
+    "repository": "rime/rime-pinyin-simp",
+    "commit": "0c6861ef7420ee780270ca6d993d18d4101049d0",
+    "source": "pinyin_simp.dict.yaml",
+    "file": "upstream/rime-common/dictionary.yaml",
+    "sha256": "e341598343a0f0f2035bb1aafc34a7f3bb7887deeecb3f60796262aaa2983e6b"
+  },
+  {
+    "name": "rime-common",
+    "repository": "rime/rime-pinyin-simp",
+    "commit": "0c6861ef7420ee780270ca6d993d18d4101049d0",
+    "source": "LICENSE",
+    "file": "upstream/rime-common/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "name": "rime-ice",
+    "repository": "iDvel/rime-ice",
+    "commit": "da1fbe602e38f26db846fa10120ee64c2b0324c0",
+    "source": "cn_dicts/others.dict.yaml",
+    "file": "upstream/rime-ice/dictionary.yaml",
+    "sha256": "c7475d773e619f61b88d47fa8ec789aba02aa0d1c98edaed309e53487b048b32"
+  },
+  {
+    "name": "rime-ice",
+    "repository": "iDvel/rime-ice",
+    "commit": "da1fbe602e38f26db846fa10120ee64c2b0324c0",
+    "source": "LICENSE",
+    "file": "upstream/rime-ice/LICENSE",
+    "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  }
+]

@@ -17,7 +17,7 @@ if [ "$build_dir" = / ] || [ "$build_dir" = "$source_root" ]; then
 fi
 prefix=/usr/lib/novapinyin/focal
 upstream_version=$(sed -n 's/^Version: //p' packaging/control.in)
-version="${upstream_version}~ubuntu20.04.3"
+version="${upstream_version}~ubuntu20.04.5"
 mkdir -p "$build_dir/sources" "$package_dir"
 export CC=gcc-10 CXX=g++-10
 fetch() {
@@ -101,6 +101,11 @@ mkdir -p "$stage$prefix" "$stage/DEBIAN"
 cp -a "$prefix/." "$stage$prefix/"
 rm -rf "$stage$prefix/include" "$stage$prefix/lib/cmake" "$stage$prefix/lib/pkgconfig" "$stage$prefix/share/applications"
 DESTDIR="$stage" cmake --install "$build_dir/nova" --strip
+cp -a "$stage/usr/share/fcitx5/themes/." "$stage$prefix/share/fcitx5/themes/"
+rm -rf "$stage/usr/share/fcitx5/themes"
+# Apply the new defaults only to this package's private themes.
+cp -a "$stage$prefix/share/fcitx5/themes/novapinyin/." "$stage$prefix/share/fcitx5/themes/default/"
+cp -a "$stage$prefix/share/fcitx5/themes/novapinyin-dark/." "$stage$prefix/share/fcitx5/themes/default-dark/"
 mkdir -p "$stage$prefix/lib/fcitx5" "$stage$prefix/share/fcitx5/addon" "$stage$prefix/share/fcitx5/inputmethod"
 mv "$stage/usr/lib/x86_64-linux-gnu/fcitx5/libnovapinyin.so" "$stage$prefix/lib/fcitx5/"
 mv "$stage/usr/share/fcitx5/addon/novapinyin.conf" "$stage$prefix/share/fcitx5/addon/"
@@ -111,6 +116,11 @@ install -m755 packaging/focal/novapinyin-manager packaging/focal/novapinyin-fcit
 install -m644 packaging/focal/novapinyin-fcitx5-configtool.desktop "$stage/usr/share/applications/"
 mkdir -p "$stage/usr/share/im-config/data"
 install -m644 packaging/focal/77_novapinyin.conf packaging/focal/77_novapinyin.rc "$stage/usr/share/im-config/data/"
+install -m755 packaging/focal/session-setup.py "$stage/usr/bin/novapinyin-session-setup"
+mkdir -p "$stage/etc/X11/Xsession.d"
+install -m644 packaging/focal/69novapinyin-setup "$stage/etc/X11/Xsession.d/"
+printf '/etc/X11/Xsession.d/69novapinyin-setup\n' > "$stage/DEBIAN/conffiles"
+install -m755 packaging/focal/postinst packaging/focal/prerm "$stage/DEBIAN/"
 install -m644 LICENSE "$stage/usr/share/doc/novapinyin/copyright"
 python3 packaging/focal/package.py "$stage" "$prefix" "$version" "$build_dir"
 # Matching source archives accompany the binary, including all vendored dependencies.
