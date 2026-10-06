@@ -9,4 +9,4 @@ Homepage: https://github.com/pyaude/nova-pinyin
 Description: NovaPinyin with a private Fcitx5 runtime for Ubuntu 20.04 X11
  Local Chinese pinyin input, dictionaries, learning, context and developer
  completions. Includes private Fcitx5 5.1.7 and LibIME 1.1.5 libraries and
- data without replacing system libraries. Activate using im-config novapinyin.
+ data without replacing system libraries. Automatically activate on the next X11 user login.

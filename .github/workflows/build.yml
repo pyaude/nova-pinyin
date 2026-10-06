@@ -1,6 +1,14 @@
 name: Build and test Ubuntu packages
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
+  focal:
+    uses: ./.github/workflows/ubuntu20.04.yml
   ubuntu:
     strategy:
       matrix:

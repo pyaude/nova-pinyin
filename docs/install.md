@@ -1,8 +1,10 @@
 # Ubuntu 安装与恢复
 
-发布包面向 Ubuntu 24.04 amd64；Ubuntu 26.04 应从源码或独立 CI 包安装，不复用未经验证的二进制。
+v1.0.0 正式版分别提供 Ubuntu 20.04、24.04 amd64 安装包。运行 `lsb_release -rs` 核对系统版本，再选择对应文件；20.04 的安装步骤见下节。Ubuntu 22.04、26.04 和其他架构未提供本轮验证包，不复用未经验证的二进制。
 
-1. 从 [v0.3.0 预发布](https://github.com/pyaude/nova-pinyin/releases/tag/v0.3.0) 下载 `novapinyin_0.3.0-1_amd64.deb` 和 `SHA256SUMS` 到同一目录，先运行 `sha256sum --check SHA256SUMS`，通过后运行 `sudo apt install ./novapinyin_0.3.0-1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
+## Ubuntu 24.04 包
+
+1. 从 [v1.0.0 正式版](https://github.com/pyaude/nova-pinyin/releases/tag/v1.0.0) 下载 `novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` 和 `SHA256SUMS` 到同一目录，先运行 `sha256sum --ignore-missing --check SHA256SUMS`，通过后运行 `sudo apt install ./novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb`。依赖由系统仓库提供，首次安装依赖可能需要联网；输入本身离线。
 2. 运行 `im-config`，选择 Fcitx5。记录此前使用的框架，按提示注销并重新登录。
 3. 打开“Fcitx 5 配置”，点击添加，取消“仅显示当前语言”筛选，添加“NovaPinyin 拼音”。按框架设置中的快捷键（通常 Ctrl+Space）启用。
 4. 输入 `nihao`，用 Space 或数字选词。单独 Shift 切换中英文。Enter 提交组合原文，下一次 Enter 才交给应用。
@@ -14,22 +16,22 @@ v0.3 新增的上下文与显式补全默认关闭。启用开发者补全后，
 
 当前源码的设置入口统一为“NovaPinyin设置”（命令 `novapinyin-manager`）。勾选“双拼”并选择自然码、小鹤或微软后保存；“候选配色”可选择浅色或深色。拼音候选用 **↓ 下一页、↑ 上一页**，也保留 PageDown/PageUp；空格和数字选词。没有拼音组合时，方向键交给应用；开发者补全模式的上下键仍选择候选。
 
-在“本地词库 → 安装内置词库…”选择 Rime 常用词精选（20,000 条）或雾凇社区补充词（162 条），点击“安装选中词库”。这一步离线完成，默认启用，可在列表禁用或移除。来源、固定版本和许可见 [词库来源](../data/dictionaries/SOURCES.md)。上述新增界面和行为包含于本地 `.4` 构建，原 v0.3.0 GitHub Release 尚不包含这些优化。
+在“本地词库 → 安装内置词库…”选择 Rime 常用词精选（20,000 条）或雾凇社区补充词（162 条），点击“安装选中词库”。这一步离线完成，默认启用，可在列表禁用或移除。来源、固定版本和许可见 [词库来源](../data/dictionaries/SOURCES.md)。上述设置、候选与词库优化均包含于 v1.0.0 的两套安装包。
 
 ## Ubuntu 20.04 专用包
 
-Ubuntu 20.04 amd64 使用单独的试用包 `novapinyin_0.3.0-1~ubuntu20.04.5_amd64.deb`，不要安装上述 Ubuntu 24.04 包。本次专用构建产物位于 `dist/ubuntu20.04/`，尚未上传 GitHub Release。
+Ubuntu 20.04 amd64 使用单独的正式包 `novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb`，不要安装上述 Ubuntu 24.04 包。安装包及完整匹配源码归档从同一个 v1.0.0 Release 下载；本地构建产物位于 `dist/ubuntu20.04/`。
 
 将专用 `.deb` 和该目录的 `SHA256SUMS` 保存到同一目录，执行：
 
 ```bash
-sha256sum --check SHA256SUMS
-sudo apt install --no-install-recommends ./novapinyin_0.3.0-1~ubuntu20.04.5_amd64.deb
+sha256sum --ignore-missing --check SHA256SUMS
+sudo apt install --no-install-recommends ./novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb
 ```
 
-安装完成后，注销并重新登录 **X11/Xorg 会话**，或重启一次。`.5` 会在首次登录自动备份原输入法选择、启用 NovaPinyin、配置 GTK/Qt/XIM 环境并启动专用框架；无需手动运行 `im-config` 或添加输入法。已运行应用的环境不能由安装程序追溯修改，因此仍需这一次重新登录。首次启用已包含键盘和 NovaPinyin，按 Ctrl+Space 切换，再输入 `nihao` 用 Space 选词。应用菜单中的“NovaPinyin 输入法配置”用于调整输入法列表，“NovaPinyin设置”用于输入设置、词库和项目管理；也可运行 `novapinyin-fcitx5-configtool` 和 `novapinyin-manager`。
+安装完成后，注销并重新登录 **X11/Xorg 会话**，或重启一次。v1.0 会在首次登录自动备份原输入法选择、启用 NovaPinyin、配置 GTK/Qt/XIM 环境并启动专用框架；无需手动运行 `im-config` 或添加输入法。已运行应用的环境不能由安装程序追溯修改，因此仍需这一次重新登录。首次启用已包含键盘和 NovaPinyin，按 Ctrl+Space 切换，再输入 `nihao` 用 Space 选词。应用菜单中的“NovaPinyin 输入法配置”用于调整输入法列表，“NovaPinyin设置”用于输入设置、词库和项目管理；也可运行 `novapinyin-fcitx5-configtool` 和 `novapinyin-manager`。
 
-首个专用包 `0.3.0-1~ubuntu20.04.1` 的入口编号误用 `90`，Ubuntu 20.04 的 `im-config` 不加载该编号：即使专用进程已手动启动，登录环境仍可能缺少输入模块变量，`im-config -m` 的第二行显示 `bogus`。`.2` 至 `.4` 需要运行 `im-config -n novapinyin` 后注销重登录；`.5` 在下次 X11 登录自动完成该选择，第二行应为 `novapinyin`。Ubuntu 系统“输入源”中的中文选择不能代替输入框架配置。修正版入口编号为 `77`，自动设置仍通过系统 im-config 的标准选择和启动流程完成。
+首个专用包 `0.3.0-1~ubuntu20.04.1` 的入口编号误用 `90`，Ubuntu 20.04 的 `im-config` 不加载该编号：即使专用进程已手动启动，登录环境仍可能缺少输入模块变量，`im-config -m` 的第二行显示 `bogus`。`.2` 至 `.4` 需要运行 `im-config -n novapinyin` 后注销重登录；v0.3 `.5` 及 v1.0 在下次 X11 登录自动完成该选择，第二行应为 `novapinyin`。Ubuntu 系统“输入源”中的中文选择不能代替输入框架配置。修正版入口编号为 `77`，自动设置仍通过系统 im-config 的标准选择和启动流程完成。
 
 登录后可运行以下命令检查会话环境；本包的 GTK/Qt 模块名均为 `fcitx5`：
 
@@ -48,11 +50,15 @@ printf 'session=%s\nGTK=%s\nQt=%s\nXIM=%s\n' "$XDG_SESSION_TYPE" "$GTK_IM_MODULE
 
 个人数据库仍遵循 `XDG_DATA_HOME`，默认 `~/.local/share/novapinyin/user.db`。专用框架配置为 `~/.config/novapinyin/fcitx5/`（遵循 `XDG_CONFIG_HOME`），原 `~/.config/fcitx5/profile` 保留。首次运行将已有 NovaPinyin 设置复制到专用目录，随后保留专用设置，不反复覆盖；未知选项保留。
 
-`.5` 的自动启用记录及原选择备份位于 `$XDG_CONFIG_HOME/novapinyin/session-setup.json`（默认 `~/.config/novapinyin/`），权限为仅当前用户可读写；家目录中的 `.xinputrc.novapinyin-setup` 用于在卸载时定位记录。后续通过 im-config 选择其他框架时，不会在每次登录重新改回 NovaPinyin。手工维护的 `.xinputrc`、符号链接或非本人拥有的配置会保留；这类自定义环境需按自己的会话配置启用。
+v1.0 的自动启用记录及原选择备份位于 `$XDG_CONFIG_HOME/novapinyin/session-setup.json`（默认 `~/.config/novapinyin/`），权限为仅当前用户可读写；家目录中的 `.xinputrc.novapinyin-setup` 用于在卸载时定位记录。后续通过 im-config 选择其他框架时，不会在每次登录重新改回 NovaPinyin。手工维护的 `.xinputrc`、符号链接或非本人拥有的配置会保留；这类自定义环境需按自己的会话配置启用。
 
-需要保留安装包但恢复原框架时，可运行 `novapinyin-session-setup --restore`，然后注销重登录；自动启用会停止。卸载 `.5` 时，若输入法选择仍是该包写入的版本，会恢复备份；首次安装前没有个人选择，或原来已选择旧版 NovaPinyin 时，回到系统默认。用户安装后自行改过的选择保留。普通卸载保留个人词条、词库、项目索引和输入设置，完成后仍需注销重登录。
+需要保留安装包但恢复原框架时，可运行 `novapinyin-session-setup --restore`，然后注销重登录；自动启用会停止。卸载 v1.0 时，若输入法选择仍是该包写入的版本，会恢复备份；首次安装前没有个人选择，或原来已选择旧版 NovaPinyin 时，回到系统默认。用户安装后自行改过的选择保留。普通卸载保留个人词条、词库、项目索引和输入设置，完成后仍需注销重登录。
 
-此包关闭原生 Wayland 支持，当前验证为 Ubuntu 20.04 Docker 下的 Xvfb、GTK3、Qt5 和管理器，尚不能代表完整 GNOME 桌面、Snap/Electron 或其他架构。校验后的完整源码归档及单独的 `SOURCE_SHA256SUMS` 同时提供；重新构建步骤见 `packaging/focal/BUILD.txt`。
+此包关闭原生 Wayland 支持，当前验证为 Ubuntu 20.04 Docker 下的 Xvfb、GTK3、Qt5 和管理器，尚不能代表完整 GNOME 桌面、Snap/Electron 或其他架构。Release 的 `SHA256SUMS` 同时覆盖安装包和完整匹配源码归档；本地构建还生成单独的 `SOURCE_SHA256SUMS`；重新构建步骤见 `packaging/focal/BUILD.txt`。
+
+## 升级到 v1.0
+
+选择与当前系统相同的包，用 `sudo apt install ./对应包名.deb` 升级；无需先卸载。v1.0 沿用 schema 2，保留 v0.3 的个人词条、选择次数、已安装词库、项目索引和输入设置。升级后注销重登录或重启以加载插件和主题；Ubuntu 20.04 已有自动启用记录与后续手动选择保留。旧版 v0.2 的 schema 1 仍按原迁移规则升级，回退前应保留备份。
 
 ## GNOME / Wayland
 
@@ -68,6 +74,6 @@ GNOME 桌面搜索框或候选窗位置可能需要 Kimpanel 扩展。不要直�
 - 仅某个应用失败：检查工具包输入模块、应用后端和沙箱来源；不要反复全局改环境变量。
 - 学习数据失败：基础输入仍可用。检查 `~/.local/share/novapinyin/` 权限和磁盘空间；保留 `user.db` 备份，不直接删除故障文件。
 - 设置异常：NovaPinyin设置选择“恢复默认设置”；这不会清空个人词条。
-- 卸载：`sudo apt remove novapinyin`。Ubuntu 20.04 `.5` 自动恢复由它管理的原输入法选择；24.04 包及早期 20.04 包需在 `im-config` 选择原来的输入框架。注销重登录。卸载保留个人数据；需要清空时先在“NovaPinyin设置”清空或导出备份，再自行移除个人数据目录。
+- 卸载：`sudo apt remove novapinyin`。Ubuntu 20.04 v1.0（及 v0.3 `.5`）自动恢复由它管理的原输入法选择；24.04 包及早期 20.04 包需在 `im-config` 选择原来的输入框架。注销重登录。卸载保留个人数据；需要清空时先在“NovaPinyin设置”清空或导出备份，再自行移除个人数据目录。
 
 个人数据遵循 `XDG_DATA_HOME`，默认 `~/.local/share/novapinyin/user.db`；配置默认 `~/.config/fcitx5/conf/novapinyin.conf`。隐私模式和密码/敏感提示关闭学习与个人词条；客户端不总能识别敏感字段，输入敏感内容前可手动启用隐私模式。

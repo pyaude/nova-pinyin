@@ -17,7 +17,7 @@ if [ "$build_dir" = / ] || [ "$build_dir" = "$source_root" ]; then
 fi
 prefix=/usr/lib/novapinyin/focal
 upstream_version=$(sed -n 's/^Version: //p' packaging/control.in)
-version="${upstream_version}~ubuntu20.04.5"
+version="${upstream_version}~ubuntu20.04.1"
 mkdir -p "$build_dir/sources" "$package_dir"
 export CC=gcc-10 CXX=g++-10
 fetch() {

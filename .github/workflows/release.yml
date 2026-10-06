@@ -1,4 +1,4 @@
-name: Publish Ubuntu pre-release
+name: Publish Ubuntu release
 
 on:
   push:
@@ -12,6 +12,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  focal:
+    uses: ./.github/workflows/ubuntu20.04.yml
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -27,7 +29,7 @@ jobs:
       - name: Install build and graphical test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config libfcitx5core-dev libfcitx5config-dev libimecore-dev libimepinyin-dev libime-data libboost-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev python3-tk git libgtk-3-dev qtbase5-dev xvfb xauth xdotool dbus-x11
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libfcitx5core-dev libfcitx5config-dev libimecore-dev libimepinyin-dev libime-data libboost-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev python3-tk git libgtk-3-dev qtbase5-dev xvfb xauth xdotool dbus-x11 fonts-noto-cjk
       - name: Build, test and package
         run: ./scripts/build-deb.sh
       - name: Address and undefined behavior sanitizers
@@ -40,27 +42,28 @@ jobs:
           ctest --test-dir build-asan --output-on-failure
       - name: Install and verify graphical input
         run: |
-          version=$(sed -n 's/^Version: //p' packaging/control.in)
+          version="$(sed -n 's/^Version: //p' packaging/control.in)~ubuntu24.04.1"
           sudo apt-get install -y "./dist/novapinyin_${version}_amd64.deb"
           cmake -S . -B build -DNOVA_GUI_SMOKE=ON
           cmake --build build --parallel 2
           NOVA_ISOLATED_GUI_TEST=1 dbus-run-session -- bash tests/gui-smoke.sh
           NOVA_ISOLATED_GUI_TEST=1 XDG_DATA_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" xvfb-run -a python3 tests/manager-smoke.py
+          NOVA_ISOLATED_GUI_TEST=1 xvfb-run -a -s "-screen 0 1280x800x24" python3 tests/candidate-ui-smoke.py
       - name: Create portable checksum file
         working-directory: dist
         run: |
-          version=$(sed -n 's/^Version: //p' ../packaging/control.in)
+          version="$(sed -n 's/^Version: //p' ../packaging/control.in)~ubuntu24.04.1"
           sha256sum "novapinyin_${version}_amd64.deb" > SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: pre-release-package
+          name: ubuntu24.04-package
           path: |
             dist/*.deb
             dist/SHA256SUMS
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [build, focal]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -71,16 +74,23 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: pre-release-package
+          pattern: ubuntu*-package
+          merge-multiple: true
           path: dist
       - name: Verify assets
         working-directory: dist
-        run: sha256sum --check SHA256SUMS
-      - name: Publish pre-release
+        run: |
+          version=$(sed -n 's/^Version: //p' ../packaging/control.in)
+          test -f "novapinyin_${version}~ubuntu20.04.1_amd64.deb"
+          test -f "novapinyin_${version}~ubuntu24.04.1_amd64.deb"
+          test -f "novapinyin_${version}~ubuntu20.04.1_sources.tar.gz"
+          sha256sum *.deb *_sources.tar.gz > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - name: Publish stable release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/SHA256SUMS \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false \
-            --title "NovaPinyin $GITHUB_REF_NAME（预发布）" \
+          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/*_sources.tar.gz dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --latest \
+            --title "NovaPinyin $GITHUB_REF_NAME（正式版）" \
             --notes-file "docs/releases/$GITHUB_REF_NAME.md"

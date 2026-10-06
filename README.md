@@ -1,8 +1,8 @@
 # NovaPinyin — Ubuntu 本地拼音输入法
 
-基于 Fcitx5 和 LibIME 的独立输入法引擎，当前版本为 **v0.3.0**，目标 Ubuntu 24.04 amd64，按 Pre-release 提供试用验证。使用 Fcitx5 的候选 UI 与配置工具；个人词条在本机保存。
+基于 Fcitx5 和 LibIME 的独立输入法引擎，当前版本为 **v1.0.0**，分别提供 Ubuntu 20.04、24.04 amd64 正式版安装包。使用 Fcitx5 的候选 UI 与配置工具；个人词条在本机保存。
 
-开发版本号不代表已发布；可下载的发布包以 GitHub Release 为准。本次设置、候选、内置词库及自动启用优化已提供 Ubuntu 20.04 `.5` 本地试用包，尚未更新 GitHub Release。本地验证及仍需桌面验收的范围见 [验证记录](docs/validation.md)。
+可下载的发布包及校验文件以 GitHub Release 为准；不同 Ubuntu 版本的安装包不能混用。本地验证及仍需桌面验收的范围见 [验证记录](docs/validation.md)。
 
 ## 功能
 
@@ -15,20 +15,27 @@
 - NovaPinyin设置（双拼、词库、浅色／深色候选配色）、Fcitx5 原生设置、Ubuntu `.deb` 打包。
 - 默认关闭的内存上下文排序、可覆盖的应用提示；显式命令/代码补全及用户指定的项目标识符索引。
 
-AI、编辑器语义集成、云输入和同步不在本次 v0.3 交付范围内。NovaPinyin设置不需要联网。新功能的边界及使用方法见 [高级输入说明](docs/advanced-input.md)。
+AI、编辑器语义集成、云输入和同步不在 v1.0 交付范围内。NovaPinyin设置不需要联网。新功能的边界及使用方法见 [高级输入说明](docs/advanced-input.md)。
 
 ## 安装
 
-从 [v0.3.0 GitHub Release](https://github.com/pyaude/nova-pinyin/releases/tag/v0.3.0) 下载 Ubuntu 24.04 amd64 安装包及 `SHA256SUMS`，保存到同一目录。当前版本用于预发布验证，桌面兼容范围见发布说明。
+从 [v1.0.0 GitHub Release](https://github.com/pyaude/nova-pinyin/releases/tag/v1.0.0) 下载与你的系统对应的安装包及 `SHA256SUMS`，保存到同一目录：
+
+| 系统 | 安装包 | 首次启用 |
+| --- | --- | --- |
+| Ubuntu 20.04 amd64（X11） | `novapinyin_1.0.0-1~ubuntu20.04.1_amd64.deb` | 安装后注销重登录或重启，自动设置 |
+| Ubuntu 24.04 amd64 | `novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` | im-config 选择 Fcitx5，重登录后添加 NovaPinyin |
+
+以下是 Ubuntu 24.04 示例；只下载所需资产时用 `--ignore-missing` 检查现有文件。
 
 ```bash
-sha256sum --check SHA256SUMS
-sudo apt install ./novapinyin_0.3.0-1_amd64.deb
+sha256sum --ignore-missing --check SHA256SUMS
+sudo apt install ./novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb
 ```
 
 运行 `im-config` 选择 Fcitx5、注销重登录，再通过“Fcitx 5 配置”添加 NovaPinyin 拼音。完整步骤、GNOME/Wayland 注意事项和卸载恢复见 [安装说明](docs/install.md)。
 
-Ubuntu 20.04 amd64 提供单独的本地试用构建，带专用 Fcitx5/LibIME 运行库，安装后在下次 X11 登录自动完成输入法选择、环境配置和启动，无需手动执行 im-config 或添加输入法。仍需注销重登录或重启一次。安装方式和验证边界见 [Ubuntu 20.04 安装说明](docs/install.md#ubuntu-2004-专用包)。不能复用上面的 24.04 安装包；当前 20.04 构建针对 X11，尚未上传 GitHub Release。
+Ubuntu 20.04 amd64 提供单独构建，带专用 Fcitx5/LibIME 运行库，安装后在下次 X11 登录自动完成输入法选择、环境配置和启动，无需手动执行 im-config 或添加输入法。仍需注销重登录或重启一次。安装方式和验证边界见 [Ubuntu 20.04 安装说明](docs/install.md#ubuntu-2004-专用包)。不能复用上面的 24.04 安装包；当前 20.04 构建针对 X11，Release 同时提供包含专用运行库及模型源数据的完整匹配源码归档。
 
 ## 开发与打包
 
@@ -41,7 +48,7 @@ sudo apt-get install build-essential cmake ninja-build pkg-config \
 ./scripts/build-deb.sh
 ```
 
-脚本先构建和测试，再根据真实库依赖生成 `dist/novapinyin_0.3.0-1_amd64.deb` 与 SHA256 校验文件。只需要构建时：
+脚本先构建和测试，再根据真实库依赖生成 `dist/novapinyin_1.0.0-1~ubuntu24.04.1_amd64.deb` 与 SHA256 校验文件。只需要构建时：
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug

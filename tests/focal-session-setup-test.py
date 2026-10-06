@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import pwd
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,12 @@ import uuid
 
 SETUP = '/usr/bin/novapinyin-session-setup'
 REMOTE = '/usr/lib/novapinyin/focal/bin/fcitx5-remote'
-PACKAGE = '/project/dist/ubuntu20.04/novapinyin_0.3.0-1~ubuntu20.04.5_amd64.deb'
+ROOT = Path(__file__).resolve().parents[1]
+VERSION = next(line.split(': ', 1)[1] for line in (ROOT / 'packaging/control.in').read_text().splitlines()
+               if line.startswith('Version: ')) + '~ubuntu20.04.1'
+PACKAGE = str(Path(os.environ.get('NOVA_PACKAGE_DIR', str(ROOT / 'dist/ubuntu20.04')))
+              / ('novapinyin_' + VERSION + '_amd64.deb'))
+BUILD = Path(os.environ.get('NOVA_BUILD_DIR', str(ROOT / 'build-focal/nova'))).resolve()
 
 
 def check_real_clients():
@@ -39,7 +45,7 @@ def check_real_clients():
         with tempfile.TemporaryDirectory(prefix='nova-auto-clients-') as temporary:
             for toolkit, title in [('gtk', 'GTK'), ('qt', 'Qt')]:
                 output = Path(temporary) / (toolkit + '.txt')
-                client = subprocess.Popen(['/project/build-focal/nova/nova-' + toolkit + '-smoke', str(output)])
+                client = subprocess.Popen([str(BUILD / ('nova-' + toolkit + '-smoke')), str(output)])
                 try:
                     deadline = time.monotonic() + 10
                     while time.monotonic() < deadline:
@@ -123,8 +129,8 @@ set -e
 STARTUP=true
 . /etc/X11/Xsession.d/69novapinyin-setup
 . /etc/X11/Xsession.d/70im-config_launch
-exec /usr/bin/im-launch /usr/bin/python3 /project/tests/focal-session-setup-test.py --client
-'''
+exec /usr/bin/im-launch /usr/bin/python3 %s --client
+''' % shlex.quote(str(Path(__file__).resolve()))
         result = self.run_user('dbus-run-session', '--', 'xvfb-run', '-a', 'sh', '-ec', script)
         self.assertIn('gtk: automatic login', result.stdout)
         self.assertIn('qt: automatic login', result.stdout)
