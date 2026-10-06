@@ -6,7 +6,7 @@
 
 ## 功能
 
-- 全拼、基础句子组合、逐段选择、光标编辑、数字/空格/鼠标选词及候选翻页。
+- 全拼、基础句子组合、逐段选择、光标编辑、横向拼音候选、数字/空格/鼠标选词及候选翻页。
 - 自然码、小鹤、微软双拼；独立可配置的常用模糊音。
 - 后端常见拼音纠错及末尾邻键/换位纠错；候选标记，不自动改写或执行命令。
 - SQLite 本地词条学习、重启召回、关闭学习及隐私模式。
@@ -27,6 +27,8 @@ sudo apt install ./novapinyin_0.3.0-1_amd64.deb
 ```
 
 运行 `im-config` 选择 Fcitx5、注销重登录，再通过“Fcitx 5 配置”添加 NovaPinyin 拼音。完整步骤、GNOME/Wayland 注意事项和卸载恢复见 [安装说明](docs/install.md)。
+
+Ubuntu 20.04 amd64 提供单独的本地试用构建，带专用 Fcitx5/LibIME 运行库，启用方式和验证边界见 [Ubuntu 20.04 安装说明](docs/install.md#ubuntu-2004-专用包)。不能复用上面的 24.04 安装包；当前 20.04 构建针对 X11，尚未上传 GitHub Release。
 
 ## 开发与打包
 
@@ -58,3 +60,5 @@ ctest --test-dir build --output-on-failure
 ## 授权
 
 项目源码和人工编写的示例词库：GPL-3.0-or-later。Fcitx5、LibIME、OpenCC、SQLite、Python/Tk 等由发行版安装，遵循各自许可证；基础词库与模型使用发行版的 LibIME 数据包。依赖与来源见 [后端决策](docs/backend-decision.md)。
+
+Ubuntu 20.04 专用包例外：自带 Fcitx5、LibIME、Qt 绑定、配置工具和所需数据，使用上游固定版本的源码与模型构建；完整匹配源码归档及许可说明随包提供。其他系统库仍由发行版提供。

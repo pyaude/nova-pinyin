@@ -18,6 +18,9 @@ def run_tool(*args):
 
 
 def config_path():
+    framework = os.environ.get("FCITX_CONFIG_HOME", "")
+    if framework and Path(framework).is_absolute():
+        return Path(framework) / "conf/novapinyin.conf"
     base = os.environ.get("XDG_CONFIG_HOME", "")
     if not base or not Path(base).is_absolute():
         base = str(Path.home() / ".config")

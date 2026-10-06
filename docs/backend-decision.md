@@ -47,3 +47,9 @@ Core 不引用 Fcitx5 Core 的输入上下文/事件类型；LibIME 自身依赖
 | 本项目源码与示例词库 | 本仓库、人工编写词条 | GPL-3.0-or-later |
 
 上游依据：[Fcitx5 官方拼音构建](https://github.com/fcitx/fcitx5-chinese-addons/blob/master/im/pinyin/CMakeLists.txt)、[LibIME PinyinContext](https://github.com/fcitx/libime/blob/master/src/libime/pinyin/pinyincontext.h)、[libpinyin 公共接口](https://github.com/libpinyin/libpinyin/blob/main/src/pinyin.h)。实现只使用 Ubuntu 24.04 实际提供的 API，而不是直接照搬上游最新版本。
+
+## Ubuntu 20.04 专用构建例外
+
+用户另行要求 Ubuntu 20.04 amd64 包，采用 `scripts/build-focal-deb.sh` 的独立构建，不降低主引擎的 LibIME/Fcitx5 API 要求，也不混用 Ubuntu 24.04 ABI。Focal 官方输入法库为早期开发版；专用包携带上游固定版本 Fcitx5 5.1.7、LibIME 1.1.5、xcb-imdkit 1.0.8、Qt 绑定/配置工具 5.0.17 及匹配数据，放在私有目录并使用对应 RPATH。下载校验表见 `packaging/focal/sources.sha256`，匹配完整源码和许可说明同时提供。
+
+普通系统库与 GTK3/Qt5 输入模块来自 Ubuntu 20.04 仓库，不捆绑 glibc/libstdc++，不要求 PPA。框架配置与系统 Fcitx5 隔离，已有 NovaPinyin 引擎设置只在首次启动时复制，个人数据库保持原 XDG 位置。本包仅开启 X11，验证范围见 `validation.md`；不据此扩大主发行包的桌面支持声明。

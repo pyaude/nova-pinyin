@@ -9,6 +9,7 @@
 #include <libime/core/userlanguagemodel.h>
 #include <libime/pinyin/pinyindictionary.h>
 #include <libime/pinyin/shuangpinprofile.h>
+#include <opencc/Export.hpp>
 #include <opencc/SimpleConverter.hpp>
 #include <set>
 #include <stdexcept>
@@ -24,7 +25,7 @@ std::string quoted(std::string s) {
     return s;
 }
 std::string modelPath(const char *file) {
-    for (const char *dir : {"/usr/share/libime", "/usr/share/fcitx5/data"}) {
+    for (const char *dir : {NOVA_DICTIONARY_DIR, "/usr/share/libime", "/usr/share/fcitx5/data"}) {
         auto p = std::filesystem::path(dir) / file;
         if (std::filesystem::exists(p))
             return p;

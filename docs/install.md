@@ -12,6 +12,39 @@
 
 v0.3 新增的上下文与显式补全默认关闭。启用开发者补全后，按 `Ctrl+Alt+Space` 进入，Space 输入空格，Tab/Enter 只提交选中的文字，Esc 或失焦取消。项目需用户指定目录并显式索引。升级安装后通过 Fcitx5 菜单重新启动，或注销重登录，以加载新插件。配置、忽略规则及 v0.2 升级/回退说明见 [高级输入](advanced-input.md)。
 
+## Ubuntu 20.04 专用包
+
+Ubuntu 20.04 amd64 使用单独的试用包 `novapinyin_0.3.0-1~ubuntu20.04.3_amd64.deb`，不要安装上述 Ubuntu 24.04 包。本次专用构建产物位于 `dist/ubuntu20.04/`，尚未上传 GitHub Release。
+
+将专用 `.deb` 和该目录的 `SHA256SUMS` 保存到同一目录，执行：
+
+```bash
+sha256sum --check SHA256SUMS
+sudo apt install --no-install-recommends ./novapinyin_0.3.0-1~ubuntu20.04.3_amd64.deb
+im-config -n novapinyin
+```
+
+记录原输入框架后，注销并重新登录 **X11/Xorg 会话**。首次启用已包含键盘和 NovaPinyin，按 Ctrl+Space 切换，再输入 `nihao` 用 Space 选词。应用菜单中的“NovaPinyin 输入法配置”用于调整输入法列表，“NovaPinyin 词库管理”用于输入设置、词库和项目管理；也可运行 `novapinyin-fcitx5-configtool` 和 `novapinyin-manager`。
+
+首个专用包 `0.3.0-1~ubuntu20.04.1` 的入口编号误用 `90`，Ubuntu 20.04 的 `im-config` 不加载该编号：即使专用进程已手动启动，登录环境仍可能缺少输入模块变量，`im-config -m` 的第二行显示 `bogus`。升级到 `.2` 或更新版本后重新运行 `im-config -n novapinyin`，第二行应为 `novapinyin`，然后注销重登录；Ubuntu 系统“输入源”中的中文选择不能代替此步骤。修正版入口编号为 `77`，仅显式选择后启用，保持原自动框架选择规则。
+
+登录后可运行以下命令检查会话环境；本包的 GTK/Qt 模块名均为 `fcitx5`：
+
+```bash
+im-config -m
+printf 'session=%s\nGTK=%s\nQt=%s\nXIM=%s\n' "$XDG_SESSION_TYPE" "$GTK_IM_MODULE" "$QT_IM_MODULE" "$XMODIFIERS"
+```
+
+预期会话为 `x11`，GTK 和 Qt 为 `fcitx5`，XIM 为 `@im=fcitx`。先在系统自带 GTK3 文本编辑器中输入 `nihao` 并用空格选词；若只有特定应用失败，再检查该应用的输入模块或沙箱环境。
+
+`.3` 修正专用包的浅色/深色主题生成问题：旧构建工具会合并空 `Image=` 和后续 `Color=`，使选中候选显示为白底白字。升级后注销重登录，加载修正的主题和插件；拼音候选改为横向排列。用户已有的自定义主题和配置不覆盖，实际微信 Linux 客户端效果仍需在用户机器上复验。
+
+包内置 Fcitx5 5.1.7、LibIME 1.1.5、Qt 绑定和配置工具 5.0.17，位于 `/usr/lib/novapinyin/focal/`；GTK3/Qt5 输入模块及其他系统库由 Ubuntu 20.04 官方仓库安装，无需添加 PPA 或替换系统 glibc/libstdc++。首次安装依赖可能需要联网，输入运行时离线。
+
+个人数据库仍遵循 `XDG_DATA_HOME`，默认 `~/.local/share/novapinyin/user.db`。专用框架配置为 `~/.config/novapinyin/fcitx5/`（遵循 `XDG_CONFIG_HOME`），原 `~/.config/fcitx5/profile` 保留。首次运行将已有 NovaPinyin 设置复制到专用目录，随后保留专用设置，不反复覆盖；未知选项保留。卸载保留用户数据；恢复原输入框架时运行 `im-config` 选择此前的框架，再注销重登录。
+
+此包关闭原生 Wayland 支持，当前验证为 Ubuntu 20.04 Docker 下的 Xvfb、GTK3、Qt5 和管理器，尚不能代表完整 GNOME 桌面、Snap/Electron 或其他架构。校验后的完整源码归档及单独的 `SOURCE_SHA256SUMS` 同时提供；重新构建步骤见 `packaging/focal/BUILD.txt`。
+
 ## GNOME / Wayland
 
 每个应用的输入接口不同，不能通过一个全局环境变量保证所有应用兼容。先在 GTK 文本框验证，再检查应用实际使用 Wayland 还是 XWayland。Qt 应用需要对应 Fcitx5 输入模块；原生 Wayland Chromium/Electron 的参数按具体版本确认。

@@ -26,6 +26,42 @@
 
 在上述 Ubuntu 24.04.5 amd64 容器中重新运行打包脚本，35 项 CTest 全部通过。安装新包后，独立 D-Bus/Xvfb 下 GTK3、Qt5 中文和显式补全提交、选择 Enter 消费规则及管理器图形检查通过。使用临时 XDG 目录再次验证 v0.2 升级的个人词条、选择次数与领域词库保留，卸载/重装的个人词条与项目索引保留，以及显式清空后个人词条和项目索引移除、领域词库保留。源码与已通过内存检查的 `6b813b6` 一致；发布准备仅调整发布和安装文档，仍须通过对应提交的远程 CI 后创建标签。
 
+## Ubuntu 20.04 amd64 专用试用包（2026-10-06）
+
+按用户要求在独立 Ubuntu 20.04 Docker 环境构建，未使用宿主 Ubuntu 26.04 或 Ubuntu 24.04 的二进制库。编译器为 GCC 10.5，glibc 2.31、SQLite 3.31.1、OpenCC 1.0.5、Python 3.8.10、GoogleTest 1.10、Qt 5.12.8；CMake 3.28.3 仅为构建工具。
+
+- Ubuntu 20.04 官方 Fcitx5/LibIME 为早期开发版，无法满足引擎。本包从固定、校验后的源码编译 Fcitx5 5.1.7、LibIME 1.1.5、xcb-imdkit 1.0.8、Qt 绑定和配置工具 5.0.17，携带匹配的词库/模型，安装到 `/usr/lib/novapinyin/focal/`。系统 GTK3/Qt5 前端和其他库仍由 Focal 官方仓库提供。
+- 兼容性修复：显式包含旧 OpenCC 的导出定义，词库路径可配置；SQLite 学习时间改用等价的 `CAST(strftime('%s','now') AS INTEGER)`，解决 3.31 不支持 `unixepoch()` 导致的学习失败，保持 schema 与事务不变。管理器支持 `FCITX_CONFIG_HOME`。
+- 35 项常规 CTest 和独立 ASan/UBSan（含 `detect_leaks=1`）全部通过，包含 14 个 Python 3.8 项目索引场景。Ubuntu 24.04 的 35 项常规回归测试也通过；本轮尚无 Ubuntu 20.04 远程 CI 记录。
+- 在另一个未装开发库的 Ubuntu 20.04 容器中，通过 `apt install --no-install-recommends` 安装实际 `.deb`，依赖正常解析，无未找到的运行库；生成依赖要求 `libc6 >= 2.30`、`libstdc++6 >= 9`，没有替换系统基础库。
+- 安装后的独立 D-Bus/Xvfb 检查通过：GTK3、Qt5 实际收到“你好”和显式补全，取消不提交前缀，选择 Enter 不触发应用激活；管理器设置、词库、后台索引和项目选择通过。专用启动器、Qt 配置工具窗口、旧 Fcitx5 profile 保留、已有引擎设置一次复制及未知选项/专用设置重启后保留已验证。
+- 临时 XDG 目录验证 schema 1 自动迁移、个人词条及次数保留；卸载/重装保留词条、领域词库、项目索引和专用设置；显式清空移除个人学习与项目索引，领域词库仍保留。
+
+产物位于 `dist/ubuntu20.04/`：`novapinyin_0.3.0-1~ubuntu20.04.1_amd64.deb`、二进制 `SHA256SUMS`、完整匹配源码归档和 `SOURCE_SHA256SUMS`；本次为本地专用构建，未创建新发布标签或上传 Release。可重复构建入口为 `scripts/build-focal-deb.sh`，依赖准备见 `packaging/focal/BUILD.txt`。框架配置与系统 Fcitx5 分开，个人数据库继续使用原 XDG 位置，安装/卸载不写用户配置。原生 Wayland 在该构建中关闭；Xvfb 的通过不能代表 GNOME 原生桌面、Snap/Electron、GTK4/Qt6 或其他架构已验收。本轮没有 Ubuntu 20.04 的性能验收结论。
+
+### Ubuntu 20.04 登录入口修正（同日，`.2`）
+
+用户反馈 `.1` 已启动专用进程但不能输入中文，`im-config -m` 第二行为 `bogus`。检查 Focal im-config 0.44-1ubuntu1.3 源码确认 `active_im` 和 `run_im` 只识别编号 `00–89`；初版误用 `90_novapinyin`，配置可写入却不能在登录时加载。此前图形测试手动设置环境变量并启动进程，未覆盖此登录入口，不能据此声明 `.1` 登录启用成功。
+
+- 改为 `77_novapinyin`，`package_auto` 返回失败，仅显式选择后启用，保持原自动输入框架规则；版本为 `0.3.0-1~ubuntu20.04.2`。
+- 新增 `tests/focal-imconfig-test.py`，在旧实际安装包上因入口缺失而失败；升级实际 `.2` 后通过菜单发现、原生 `run_im` 第一阶段环境变量校验、第二阶段启动及 NovaPinyin 插件可用检查。测试使用临时 XDG 目录及独立 D-Bus/Xvfb，不修改真实用户配置。
+- 隔离测试用户运行 `im-config -n novapinyin`，随后 `im-config -m` 第二行确认为 `novapinyin`；升级移除旧编号入口。
+- `.2` 打包运行的 35 项常规 CTest 全部通过；安装后 GTK3/Qt5 中文及补全/Enter 处理、专用配置与 Qt 配置工具、管理器均复验通过。引擎源码未改动，内存检查沿用上节同一引擎源码的结果，本轮未重新运行 sanitizer。
+
+当前 `SHA256SUMS` 和 `SOURCE_SHA256SUMS` 对应 `.2`，完整匹配源码同时提供，未上传 GitHub Release。仍仅验证隔离环境下的 X11 程序及原生 im-config 加载流程，不能代表所有真实 GNOME 会话或应用已通过。
+
+### Ubuntu 20.04 候选显示修正（同日，`.3`）
+
+用户在微信 Linux 原生版反馈首个选中候选为空白、候选列表纵向排列。独立 Xvfb/GTK3 窗口复现同样的空白首候选；并非词条缺失，而是 Focal gettext 0.19.8 的 `msgfmt --desktop` 把上游主题模板的空 `Image=` 与下一行合并为 `Image=Color=#808080`，导致选中背景丢失、白色文字绘制在白色背景上。浅色、深色主题的候选及菜单背景均受影响。
+
+- 构建时从两份上游主题模板移除空 `Image=`（框架默认值仍为空），保留随后颜色行；翻译生成后检查候选/菜单背景和高亮配置，异常时停止打包。固定源码归档及其下载校验值未改动，处理步骤在构建脚本中可重复执行。
+- 拼音候选改为 `Horizontal`；补全列表保持适合长标识符的原有纵向排列。新增事件检查确认布局提示及首候选实际文字，选择映射和按键规则保持一致。
+- 新增 `tests/candidate-ui-smoke.py`，独立 D-Bus/Xvfb、临时 XDG 目录，读取真实 X11 候选窗像素并保存 PNG。旧 `.2` 安装包因高亮背景缺失而失败；`.3` 实际安装包在 GTK3/Qt5、浅色/深色四种组合下验证选中候选背景与文字可见、横向窗口（324×82）及提交“好”均通过。测试字体为 Focal `fonts-noto-cjk`，不修改运行时字体配置或真实用户数据。
+- Ubuntu 20.04 的 35 项常规 CTest、独立 ASan/UBSan（`detect_leaks=1`）全部通过；安装后原生 im-config 两阶段、专用配置/Qt 配置工具、管理器及 GTK/Qt 中文和补全/Enter 行为复验通过。
+- Ubuntu 24.04 初次并行回归时 `Storage.AsyncFlush` 的固定 2 秒初始化等待未满足，抛出“个人学习数据尚未就绪”；未修改测试等待或跳过用例。停止其他测试后，串行完整 35 项常规及 35 项 ASan/UBSan（含泄漏检查）均通过。初次失败日志保留，不能把它报告为通过。
+
+当前二进制及完整匹配源码为 `0.3.0-1~ubuntu20.04.3`，`dist/ubuntu20.04/` 校验文件对应 `.3`；实际渲染截图位于该目录的 `ui-smoke-v3/`。未安装或实测微信 Linux 客户端，用户升级后仍需确认实际微信效果；仍不声明所有 GNOME/Wayland 或应用组合通过。未上传新 GitHub Release。
+
 ## v0.3 初次验证记录
 
 - 34 项 CTest 条目通过：32 项核心测试、Fcitx5 事件集成测试和项目索引测试（包含 5 个 Python 安全/边界场景）。

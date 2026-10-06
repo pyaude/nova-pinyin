@@ -240,8 +240,9 @@ std::vector<Phrase> Database::phrases() {
 }
 void Database::learn(const Phrase &p) {
     Statement q(db_,
-                "INSERT INTO user_phrase VALUES(?,?,1,unixepoch()) ON CONFLICT(reading,phrase) DO "
-                "UPDATE SET selection_count=MIN(selection_count+1,1000000),last_used=unixepoch()");
+                "INSERT INTO user_phrase VALUES(?,?,1,CAST(strftime('%s','now') AS INTEGER)) ON "
+                "CONFLICT(reading,phrase) DO UPDATE SET selection_count=MIN(selection_count+1,1000000),"
+                "last_used=CAST(strftime('%s','now') AS INTEGER)");
     q.bind(1, p.reading);
     q.bind(2, p.text);
     q.done();

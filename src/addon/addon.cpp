@@ -617,7 +617,7 @@ class Engine : public InputMethodEngine {
             auto list = std::make_unique<CommonCandidateList>();
             list->setPageSize(*config_.pageSize);
             list->setLabels({"1", "2", "3", "4", "5", "6", "7", "8", "9"});
-            list->setLayoutHint(CandidateLayoutHint::Vertical);
+            list->setLayoutHint(CandidateLayoutHint::Horizontal);
             for (const auto &c : s->session->candidates())
                 list->append(std::make_unique<Word>(
                     c, [this, id = c.id, revision = c.revision](InputContext *target) {

@@ -19,7 +19,7 @@ Developer=True
 Context=True
 CONFIG
 chmod 700 "$XDG_RUNTIME_DIR"
-export XMODIFIERS=@im=fcitx GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx GTK_IM_MODULE="${NOVA_GUI_IM_MODULE:-fcitx}" QT_IM_MODULE="${NOVA_GUI_IM_MODULE:-fcitx}"
 cat > "$XDG_CONFIG_HOME/fcitx5/profile" <<'PROFILE'
 [Groups/0]
 Name=Default
@@ -43,7 +43,7 @@ cleanup(){
 }
 trap cleanup EXIT
 sleep 1
-fcitx5 --disable=wayland,ibus > "$test_dir/fcitx.log" 2>&1 &
+"${NOVA_GUI_FCITX_BIN:-fcitx5}" --disable=wayland,ibus > "$test_dir/fcitx.log" 2>&1 &
 fcitx_pid=$!
 sleep 2
 for toolkit in gtk qt; do

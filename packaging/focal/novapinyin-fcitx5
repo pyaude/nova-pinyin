@@ -1,0 +1,9 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+import os
+import runpy
+import sys
+prefix = '/usr/lib/novapinyin/focal'
+if not any(arg in ('-v', '--version', '-h', '--help') for arg in sys.argv[1:]):
+    runpy.run_path(prefix + '/bin/novapinyin-runtime.py')['configure'](initial_profile=True)
+os.execv(prefix + '/bin/fcitx5', [prefix + '/bin/fcitx5', '--replace'] + sys.argv[1:])

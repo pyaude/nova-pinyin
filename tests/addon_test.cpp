@@ -87,6 +87,8 @@ TEST(Addon, EventsAndPrivacy) {
         send(std::string(1, c));
     ASSERT_TRUE(client.inputPanel().candidateList());
     EXPECT_GT(client.inputPanel().candidateList()->size(), 0);
+    EXPECT_EQ(client.inputPanel().candidateList()->layoutHint(), CandidateLayoutHint::Horizontal);
+    EXPECT_EQ(client.inputPanel().candidateList()->candidate(0).text().toString(), "你好");
     EXPECT_TRUE(send("space"));
     EXPECT_EQ(client.committed, "你好");
     for (char c : std::string("abc"))

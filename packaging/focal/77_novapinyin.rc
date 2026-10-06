@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Focal run_im only loads entries numbered 00-89; 90-99 are status markers.
+# im-config calls this once for environment and again for session startup.
+if [ "$IM_CONFIG_PHASE" = 1 ]; then
+    XMODIFIERS=@im=fcitx
+    GTK_IM_MODULE=fcitx5
+    QT_IM_MODULE=fcitx5
+    XDG_DATA_DIRS="/usr/lib/novapinyin/focal/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    FCITX_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/novapinyin/fcitx5"
+    FCITX_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/novapinyin/fcitx5"
+    FCITX_ADDON_DIRS=/usr/lib/novapinyin/focal/lib/fcitx5
+    FCITX_DATA_DIRS=/usr/lib/novapinyin/focal/share/fcitx5
+    export XMODIFIERS GTK_IM_MODULE QT_IM_MODULE XDG_DATA_DIRS
+    export FCITX_CONFIG_HOME FCITX_DATA_HOME FCITX_ADDON_DIRS FCITX_DATA_DIRS
+fi
+if [ "$IM_CONFIG_PHASE" = 2 ]; then
+    /usr/bin/novapinyin-fcitx5 -d
+fi

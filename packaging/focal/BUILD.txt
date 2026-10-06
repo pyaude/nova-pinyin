@@ -1,0 +1,70 @@
+NovaPinyin Ubuntu 20.04 amd64 package
+
+Build only inside an isolated Ubuntu 20.04 amd64 environment. The script installs
+private build dependencies into /usr/lib/novapinyin/focal and needs permission to
+write there. Do not run it in an active input method session.
+
+Install native build/test dependencies (the compiler and libraries are Focal's):
+
+apt-get update
+apt-get install -y --no-install-recommends gcc-10 g++-10 cmake ninja-build \
+  pkg-config extra-cmake-modules gettext appstream ca-certificates curl git python3-pip \
+  libdbus-1-dev libsystemd-dev libxkbcommon-dev libxkbcommon-x11-dev \
+  libxcb1-dev libxcb-util-dev libxcb-xkb-dev libxcb-keysyms1-dev \
+  libxcb-randr0-dev libxcb-icccm4-dev libxcb-ewmh-dev libxcb-xfixes0-dev \
+  libxcb-xinerama0-dev libxkbfile-dev libfmt-dev libjson-c-dev libzstd-dev \
+  libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev libboost-iostreams-dev \
+  libboost-filesystem-dev libsqlite3-dev libopencc-dev libgtest-dev dpkg-dev \
+  python3-tk libgtk-3-dev qtbase5-dev qtbase5-private-dev libqt5x11extras5-dev \
+  libkf5itemviews-dev libkf5widgetsaddons-dev xvfb xauth xdotool dbus-x11 \
+  fcitx5-frontend-gtk3 fcitx5-frontend-qt5 im-config
+python3 -m pip install cmake==3.28.3
+./scripts/build-focal-deb.sh
+
+The default output is dist/ubuntu20.04/. Source archives and data are pinned in
+sources.sha256, downloaded over HTTPS and verified before compilation. CMake
+3.28.3 is a build tool only. GCC 10 and every linked system library come from
+Focal; the package does not carry glibc or libstdc++.
+
+To rebuild from the matching source tarball without fetching upstream archives:
+copy upstream/*.tar.* to build-focal/sources/ before invoking the build script.
+The generated Debian dependencies use dpkg-shlibdeps, with package-local shlibs
+metadata excluding the libraries shipped in this package itself.
+
+The private runtime contains X11/XIM, DBus, keyboard and classic candidate UI.
+Native Wayland support is disabled in this build. The package also includes
+Fcitx5 Qt bindings and the configuration tool, both at version 5.0.17. Source
+archives and all downloaded dictionary/model source archives are provided with
+this binary; upstream notices are in /usr/share/doc/novapinyin/upstream-licenses/.
+
+Installed private runtime: /usr/lib/novapinyin/focal/
+Personal data retains its normal XDG location. The framework configuration is
+isolated in XDG_CONFIG_HOME/novapinyin/fcitx5; existing system profiles are not
+changed. The engine settings file is copied once from the old location when
+starting the private runtime or its manager, with unknown options preserved. No install
+or remove scripts write user configuration or delete personal data. Starting
+novapinyin-fcitx5 explicitly creates an initial profile only when none exists.
+Existing profiles can be managed using novapinyin-fcitx5-configtool.
+
+After installing the built package, verify both im-config session phases and
+the installed private configuration in independent D-Bus/Xvfb sessions:
+
+NOVA_ISOLATED_GUI_TEST=1 xvfb-run -a python3 tests/focal-imconfig-test.py
+NOVA_ISOLATED_GUI_TEST=1 xvfb-run -a python3 tests/focal-package-smoke.py
+
+Build GTK3/Qt5 smoke clients with NOVA_GUI_SMOKE=ON. With fonts-noto-cjk
+installed for Chinese glyph rendering, verify the actual selected-candidate
+pixels, horizontal layout and commit in both light/dark themes:
+
+NOVA_ISOLATED_GUI_TEST=1 NOVA_BUILD_DIR=build-focal/nova \
+  NOVA_GUI_FCITX_BIN=novapinyin-fcitx5 NOVA_GUI_IM_MODULE=fcitx5 \
+  NOVA_GUI_REMOTE_BIN=/usr/lib/novapinyin/focal/bin/fcitx5-remote \
+  xvfb-run -a -s "-screen 0 1280x800x24" python3 tests/candidate-ui-smoke.py
+
+Focal msgfmt 0.19.8 merges an empty Image= key with the next Color= key.
+The build script removes those empty keys from the two upstream theme
+templates (Fcitx defaults to an empty image), then validates the generated
+background/highlight colors. Upstream archives retain their original checksums.
+
+The explicit im-config entry uses prefix 77. Focal ignores prefixes 90-99 when
+loading a selected input method; those prefixes are reserved for status markers.

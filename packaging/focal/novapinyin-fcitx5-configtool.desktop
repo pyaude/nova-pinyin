@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NovaPinyin Input Method Configuration
+Name[zh_CN]=NovaPinyin 输入法配置
+Comment=Configure NovaPinyin input methods
+Comment[zh_CN]=添加和调整 NovaPinyin 输入法
+Exec=novapinyin-fcitx5-configtool
+Icon=input-keyboard
+Terminal=false
+Categories=Settings;
